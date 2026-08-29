@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>심플 영단어장</title>
+    <title>심플 영단어장 - 워홀 마스터</title>
     <style>
         :root {
             --bg-color: #ffffff;
@@ -13,7 +13,8 @@
             --hidden-bg: #f5f5f5;
             --hidden-text: #aaaaaa;
             --modal-overlay: rgba(0, 0, 0, 0.6);
-            --danger-color: #ff4757; /* 삭제 버튼용 빨간색 */
+            --danger-color: #ff4757;
+            --example-color: #555555;
         }
 
         body.dark-mode {
@@ -24,173 +25,138 @@
             --hidden-bg: #222222;
             --hidden-text: #555555;
             --modal-overlay: rgba(255, 255, 255, 0.2);
+            --example-color: #bbbbbb;
         }
 
         body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            background-color: var(--bg-color);
-            color: var(--text-color);
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: var(--bg-color); color: var(--text-color);
             font-family: 'Pretendard', -apple-system, sans-serif;
             transition: background-color 0.3s, color 0.3s;
         }
 
         /* 상단 버튼들 */
         .controls {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 100;
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            justify-content: flex-end;
+            position: fixed; top: 20px; right: 20px; z-index: 100;
+            display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;
         }
-        
         .controls button {
-            background-color: var(--btn-bg);
-            color: var(--btn-text);
-            border: none;
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.3s;
+            background-color: var(--btn-bg); color: var(--btn-text);
+            border: none; padding: 8px 12px; border-radius: 8px;
+            font-size: 0.9rem; font-weight: bold; cursor: pointer; transition: 0.3s;
         }
 
         /* 페이지 표시기 */
         .page-indicator {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: var(--btn-bg);
-            color: var(--btn-text);
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: bold;
-            font-size: 1.1rem;
-            z-index: 100;
-            transition: 0.3s;
-            opacity: 0.8;
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background-color: var(--btn-bg); color: var(--btn-text);
+            padding: 8px 16px; border-radius: 20px; font-weight: bold;
+            font-size: 1.1rem; z-index: 100; transition: 0.3s; opacity: 0.8;
         }
 
         /* 스크롤 영역 */
         .shorts-container {
-            width: 100%;
-            height: 100vh;
-            overflow-y: scroll;
-            scroll-snap-type: y mandatory;
-            -ms-overflow-style: none;
-            scrollbar-width: none;
+            width: 100%; height: 100vh; overflow-y: scroll;
+            scroll-snap-type: y mandatory; -ms-overflow-style: none; scrollbar-width: none;
             scroll-behavior: smooth;
         }
         .shorts-container::-webkit-scrollbar { display: none; }
 
         /* 카드 및 텍스트 박스 */
         .card {
-            width: 100%;
-            height: 100vh;
-            scroll-snap-align: start;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 30px;
-            position: relative;
+            width: 100%; height: 100vh; scroll-snap-align: start;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            gap: 20px; position: relative;
         }
 
         .text-box {
-            text-align: center;
-            cursor: pointer;
-            padding: 20px 40px;
-            border-radius: 12px;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
+            text-align: center; cursor: pointer; padding: 20px 30px;
+            border-radius: 12px; user-select: none; -webkit-tap-highlight-color: transparent;
+            min-width: 280px; max-width: 90%;
         }
-        .text-box .content { font-size: 3.5rem; font-weight: bold; display: block; }
-        .text-box .hint { font-size: 1.2rem; font-weight: normal; color: var(--hidden-text); display: none; }
+        
+        .text-box .content { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .word-row { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 3rem; font-weight: bold; word-break: keep-all;}
+        .phonetic { font-size: 1.2rem; color: var(--hidden-text); font-weight: normal; }
+        
+        /* 예문 및 예문 스피커 스타일 */
+        .example-row {
+            display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px;
+        }
+        .example {
+            font-size: 1.2rem; color: var(--example-color); font-style: italic;
+            line-height: 1.4; word-break: keep-all; text-align: center;
+        }
+
+        /* 스피커 버튼 */
+        .tts-btn {
+            background: none; border: none; font-size: 2rem;
+            cursor: pointer; padding: 0; transition: transform 0.1s;
+        }
+        .tts-btn:active { transform: scale(0.9); }
+        .tts-btn.small { font-size: 1.4rem; } /* 예문용 작은 스피커 */
+
+        .text-box .hint { font-size: 1.1rem; font-weight: normal; color: var(--hidden-text); display: none; margin-top: 15px; }
+        
+        /* 숨김 처리 */
         .text-box.hidden { background-color: var(--hidden-bg); }
         .text-box.hidden .content { display: none; }
         .text-box.hidden .hint { display: block; }
 
-        /* 카드 하단의 수정 버튼 */
+        /* 수정 버튼 */
         .edit-btn {
-            background: none;
-            border: 1px solid var(--hidden-text);
-            color: var(--hidden-text);
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: 0.3s;
+            background: none; border: 1px solid var(--hidden-text);
+            color: var(--hidden-text); padding: 5px 15px; border-radius: 20px;
+            font-size: 0.9rem; cursor: pointer; transition: 0.3s;
         }
         .edit-btn:hover { background-color: var(--hidden-bg); }
 
-        /* --- 단어 추가/수정 팝업(모달) 스타일 --- */
+        /* 모달 스타일 */
         .modal-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-color: var(--modal-overlay);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 200;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: var(--modal-overlay); display: none; justify-content: center; align-items: center; z-index: 200;
         }
         .modal {
-            background-color: var(--bg-color);
-            padding: 30px;
-            border-radius: 16px;
-            width: 80%;
-            max-width: 300px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            background-color: var(--bg-color); padding: 25px; border-radius: 16px;
+            width: 85%; max-width: 320px; display: flex; flex-direction: column; gap: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;
         }
         .modal h3 { margin: 0; text-align: center; font-size: 1.2rem; }
-        .modal input {
-            padding: 12px;
-            border: 1px solid var(--hidden-text);
-            border-radius: 8px;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            font-size: 1rem;
-            outline: none;
+        .modal input, .modal textarea {
+            padding: 10px; border: 1px solid var(--hidden-text); border-radius: 8px;
+            background-color: var(--bg-color); color: var(--text-color); font-size: 1rem; outline: none;
+            font-family: 'Pretendard', sans-serif;
         }
-        .modal input:focus { border-color: var(--text-color); }
-        .modal-btns { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
-        .modal-btns button {
-            flex: 1; padding: 10px; border-radius: 8px;
-            border: none; font-weight: bold; cursor: pointer;
-        }
+        .modal input:focus, .modal textarea:focus { border-color: var(--text-color); }
+        .modal textarea { resize: none; height: 60px; }
+        .modal-btns { display: flex; gap: 8px; justify-content: center; margin-top: 5px; }
+        .modal-btns button { flex: 1; padding: 10px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
         .btn-cancel { background-color: var(--hidden-bg); color: var(--text-color); }
         .btn-save { background-color: var(--btn-bg); color: var(--btn-text); }
         .btn-delete { background-color: var(--danger-color); color: white; display: none; }
-
     </style>
 </head>
 <body>
 
     <div class="controls">
         <button onclick="openModal()">+ 단어 추가</button>
-        <button onclick="toggleDarkMode()">다크모드</button>
+        <button onclick="toggleDarkMode()">다크/라이트</button>
         <button onclick="toggleFullScreen()">전체화면</button>
     </div>
 
     <div class="page-indicator" id="pageInfo">0 / 0</div>
-
     <div class="shorts-container" id="appContainer"></div>
 
     <!-- 팝업 모달창 -->
     <div class="modal-overlay" id="wordModal">
         <div class="modal">
             <h3 id="modalTitle">새 단어 등록</h3>
-            <input type="text" id="inputEn" placeholder="영단어 (예: Apple)" autocomplete="off">
-            <input type="text" id="inputKo" placeholder="뜻 (예: 사과)" autocomplete="off">
+            <input type="text" id="inputEn" placeholder="영단어 (필수)" autocomplete="off">
+            <input type="text" id="inputPron" placeholder="발음기호 (선택)" autocomplete="off">
+            <input type="text" id="inputKo" placeholder="뜻 - 한/일 무관 (필수)" autocomplete="off">
+            <textarea id="inputExEn" placeholder="영어 예문 (선택)"></textarea>
+            <textarea id="inputExKo" placeholder="예문 뜻 (선택)"></textarea>
+            
             <div class="modal-btns">
                 <button id="btnDelete" class="btn-delete" onclick="deleteWord()">삭제</button>
                 <button class="btn-cancel" onclick="closeModal()">취소</button>
@@ -203,49 +169,101 @@
         const container = document.getElementById('appContainer');
         const pageInfo = document.getElementById('pageInfo');
         
-        let wordList = JSON.parse(localStorage.getItem('myWordList'));
+        let wordList = JSON.parse(localStorage.getItem('myWordList_v2'));
+        
         if (!wordList || wordList.length === 0) {
             wordList = [
-                { en: "Coincidence", ko: "우연의 일치" },
-                { en: "Fascinating", ko: "매력적인" },
-                { en: "Determine", ko: "결정하다" }
+                { en: "Figure out", pron: "[ˈfɪɡjər aʊt]", ko: "이해하다, 알아내다", exEn: "I need to figure out how this coffee machine works.", exKo: "이 커피 머신 어떻게 쓰는지 알아내야 해요." },
+                { en: "Take over", pron: "[teɪk ˈoʊvər]", ko: "인계받다, 대신하다", exEn: "Can you take over my shift tomorrow?", exKo: "내일 제 교대근무 좀 대신해 줄 수 있나요?" },
+                { en: "Overwhelmed", pron: "[ˌoʊvərˈwelmd]", ko: "압도된, 벅찬", exEn: "I was a bit overwhelmed on my first day.", exKo: "첫날에는 일이 너무 벅차서 좀 압도당했어요." },
+                { en: "Sort out", pron: "[sɔːrt aʊt]", ko: "해결하다, 정리하다", exEn: "Don't worry, I'll sort it out.", exKo: "걱정 마요, 내가 해결할게요." },
+                { en: "Flexible", pron: "[ˈfleksəbl]", ko: "유연한, 융통성 있는", exEn: "My schedule is quite flexible this week.", exKo: "이번 주는 제 스케줄이 꽤 유동적이에요." },
+                { en: "Commute", pron: "[kəˈmjuːt]", ko: "통근, 통근하다", exEn: "The commute to the city center takes 30 minutes.", exKo: "시내까지 통근하는 데 30분 걸려요." },
+                { en: "Shift", pron: "[ʃɪft]", ko: "교대 근무", exEn: "I’m on the morning shift this week.", exKo: "저 이번 주는 아침 조(교대근무)입니다." },
+                { en: "Fill in for", pron: "[fɪl ɪn fɔːr]", ko: "~의 대타를 뛰다", exEn: "Can you fill in for Sarah? She's sick.", exKo: "사라 대타 좀 뛰어줄래? 걔 아프대." },
+                { en: "Make sense", pron: "[meɪk sens]", ko: "이해가 되다, 타당하다", exEn: "Ah, that makes sense now. Thanks!", exKo: "아, 이제 이해가 되네요. 고마워요!" },
+                { en: "Reach out", pron: "[riːtʃ aʊt]", ko: "연락하다", exEn: "Feel free to reach out if you have questions.", exKo: "질문 있으면 언제든 편하게 연락 주세요." },
+                { en: "On behalf of", pron: "[ɑːn bɪˈhæf ʌv]", ko: "~을 대신하여, 대표하여", exEn: "I'm calling on behalf of my manager.", exKo: "제 매니저를 대신해서 전화드립니다." },
+                { en: "Appreciate", pron: "[əˈpriːʃieɪt]", ko: "감사하다", exEn: "I really appreciate your help.", exKo: "도와주셔서 정말 감사합니다." },
+                { en: "Punctual", pron: "[ˈpʌŋktʃuəl]", ko: "시간을 엄수하는", exEn: "It is important to be punctual for the interview.", exKo: "면접 때는 시간을 지키는 것이 중요합니다." },
+                { en: "Straightforward", pron: "[ˌstreɪtˈfɔːrwərd]", ko: "간단한, 복잡하지 않은", exEn: "The instructions are pretty straightforward.", exKo: "지시사항이 꽤 간단하고 명확해요." },
+                { en: "Clarify", pron: "[ˈklærəfaɪ]", ko: "명확히 하다, 확실히 말하다", exEn: "Could you clarify what you mean by that?", exKo: "그게 무슨 뜻인지 좀 더 명확히 설명해 주실래요?" },
+                { en: "Get used to", pron: "[ɡet juːst tuː]", ko: "~에 익숙해지다", exEn: "I’m still getting used to the accent here.", exKo: "여기 억양에 아직 적응하는 중이에요." },
+                { en: "Inventory", pron: "[ˈɪnvəntɔːri]", ko: "재고 조사, 재고품", exEn: "We need to do the inventory tonight.", exKo: "오늘 밤에 재고 조사해야 합니다." },
+                { en: "Catch up", pron: "[kætʃ ʌp]", ko: "밀린 일을 하다, 따라잡다", exEn: "I need some time to catch up on my emails.", exKo: "밀린 이메일 좀 확인할 시간이 필요해요." },
+                { en: "Settle in", pron: "[ˈsetl ɪn]", ko: "적응하다, 자리 잡다", exEn: "How are you settling in to your new place?", exKo: "새 숙소에는 잘 적응하고 있나요?" },
+                { en: "Keep track of", pron: "[kiːp træk ʌv]", ko: "파악하다, 기록하다", exEn: "It's hard to keep track of all the orders.", exKo: "주문을 다 파악(기억)하기가 힘드네요." },
+                { en: "Tedious", pron: "[ˈtiːdiəs]", ko: "지루한, 싫증 나는", exEn: "Data entry can be a very tedious task.", exKo: "데이터 입력은 매우 지루한 작업이 될 수 있어요." },
+                { en: "Flawless", pron: "[ˈflɔːləs]", ko: "흠 없는, 완벽한", exEn: "Her English pronunciation is absolutely flawless.", exKo: "그녀의 영어 발음은 완전히 완벽해요." },
+                { en: "Familiarize", pron: "[fəˈmɪliəraɪz]", ko: "익숙하게 하다", exEn: "Take some time to familiarize yourself with the menu.", exKo: "메뉴에 익숙해질 시간을 좀 가지세요." },
+                { en: "Colleague", pron: "[ˈkɑːliːɡ]", ko: "동료", exEn: "I'm going out for a drink with my colleagues.", exKo: "동료들이랑 술 한잔 하러 가요." },
+                { en: "Accommodate", pron: "[əˈkɑːmədeɪt]", ko: "수용하다, 배려하다", exEn: "We can accommodate vegetarians.", exKo: "채식주의자분들의 식사도 맞춰드릴 수 있습니다." },
+                { en: "Tackle", pron: "[ˈtækl]", ko: "(힘든 일에) 부딪히다, 다루다", exEn: "Let's tackle this problem together.", exKo: "이 문제에 함께 부딪혀 해결해 봅시다." },
+                { en: "Reschedule", pron: "[ˌriːˈskedʒuːl]", ko: "일정을 변경하다", exEn: "Can we reschedule our meeting to Friday?", exKo: "우리 회의 금요일로 미룰 수 있을까요?" },
+                { en: "Vacancy", pron: "[ˈveɪkənsi]", ko: "결원, 빈방", exEn: "Do you have any vacancies for a barista?", exKo: "바리스타 남는 자리(구인) 있나요?" },
+                { en: "In advance", pron: "[ɪn ədˈvæns]", ko: "미리, 사전에", exEn: "Thank you in advance for your help.", exKo: "도와주셔서 미리 감사드립니다." },
+                { en: "手伝う (테츠다우)", pron: "", ko: "돕다, 거들다", exEn: "Can I help you with that?", exKo: "私が手伝いましょうか？ (제가 도와드릴까요?)" } 
             ];
-            localStorage.setItem('myWordList', JSON.stringify(wordList));
+            localStorage.setItem('myWordList_v2', JSON.stringify(wordList));
         }
 
         let totalWords = wordList.length;
 
         function renderWords() {
-            observer.disconnect();
-            container.innerHTML = '';
+            observer.disconnect(); container.innerHTML = '';
             totalWords = wordList.length;
 
-            // 단어가 하나도 없을 때의 처리
             if (totalWords === 0) {
                 container.innerHTML = `<div class="card" style="font-size:1.5rem; font-weight:bold;">단어가 없습니다.<br>우측 상단에서 추가해주세요!</div>`;
-                pageInfo.innerText = `0 / 0`;
-                return;
+                pageInfo.innerText = `0 / 0`; return;
             }
 
             wordList.forEach((item, index) => {
                 const card = document.createElement('div');
-                card.className = 'card';
-                card.dataset.index = index;
+                card.className = 'card'; card.dataset.index = index;
+
+                const pronHtml = item.pron ? `<div class="phonetic">${item.pron}</div>` : '';
+                
+                // 예문이 있을 경우 스피커 버튼(small)과 함께 렌더링
+                const exEnHtml = item.exEn ? `
+                    <div class="example-row">
+                        <span class="example">"${item.exEn}"</span>
+                        <button class="tts-btn small" onclick="speakText(this, event, 'en')" data-text="${item.exEn.replace(/"/g, '&quot;')}">🔊</button>
+                    </div>` : '';
+                    
+                const exKoHtml = item.exKo ? `
+                    <div class="example-row">
+                        <span class="example">"${item.exKo}"</span>
+                        <button class="tts-btn small" onclick="speakText(this, event, 'meaning')" data-text="${item.exKo.replace(/"/g, '&quot;')}">🔊</button>
+                    </div>` : '';
 
                 card.innerHTML = `
                     <div class="text-box" onclick="this.classList.toggle('hidden')">
-                        <span class="content">${item.en}</span>
+                        <div class="content">
+                            <div class="word-row">
+                                ${item.en}
+                                <button class="tts-btn" onclick="speakText(this, event, 'en')" data-text="${item.en}">🔊</button>
+                            </div>
+                            ${pronHtml}
+                            ${exEnHtml}
+                        </div>
                         <span class="hint">터치하여 단어 보기</span>
                     </div>
+                    
                     <div class="text-box hidden" onclick="this.classList.toggle('hidden')">
-                        <span class="content">${item.ko}</span>
+                        <div class="content">
+                            <div class="word-row">
+                                ${item.ko}
+                                <button class="tts-btn" onclick="speakText(this, event, 'meaning')" data-text="${item.ko}">🔊</button>
+                            </div>
+                            ${exKoHtml}
+                        </div>
                         <span class="hint">터치하여 뜻 보기</span>
                     </div>
-                    <!-- 단어 밑에 조그맣게 들어가는 수정 버튼 -->
+                    
                     <button class="edit-btn" onclick="openModal(${index})">수정 / 삭제</button>
                 `;
-                container.appendChild(card);
-                observer.observe(card);
+                container.appendChild(card); observer.observe(card);
             });
         }
 
@@ -255,119 +273,113 @@
                     const currentIndex = parseInt(entry.target.dataset.index);
                     if(!isNaN(currentIndex)) {
                         pageInfo.innerText = `${currentIndex + 1} / ${totalWords}`;
-                        // 스크롤 할 때마다 현재 위치를 브라우저에 저장
-                        localStorage.setItem('lastViewedWordIndex', currentIndex);
+                        localStorage.setItem('lastViewedWordIndex_v2', currentIndex);
                     }
                 }
             });
         }, { threshold: 0.5 });
 
+        // 발음 읽어주기 (TTS)
+        function speakText(btn, event, type) {
+            event.stopPropagation();
+            const textToSpeak = btn.getAttribute('data-text');
+            
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(textToSpeak);
+                
+                if (type === 'en') {
+                    utterance.lang = 'en-US';
+                } else {
+                    const hasJapanese = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(textToSpeak);
+                    if (hasJapanese) {
+                        utterance.lang = 'ja-JP';
+                    } else {
+                        utterance.lang = 'ko-KR';
+                    }
+                }
+                utterance.rate = 0.9;
+                window.speechSynthesis.speak(utterance);
+            } else {
+                alert("현재 기기에서 음성 지원이 되지 않습니다.");
+            }
+        }
 
-        // --- 모달 (단어 추가/수정/삭제) 로직 ---
+        // 모달 로직
         const modal = document.getElementById('wordModal');
         const modalTitle = document.getElementById('modalTitle');
         const inputEn = document.getElementById('inputEn');
+        const inputPron = document.getElementById('inputPron');
         const inputKo = document.getElementById('inputKo');
+        const inputExEn = document.getElementById('inputExEn');
+        const inputExKo = document.getElementById('inputExKo');
         const btnDelete = document.getElementById('btnDelete');
-        let editingIndex = -1; // -1이면 '새로 추가', 0 이상이면 '수정 중'
+        let editingIndex = -1;
 
-        // 팝업 열기 (index가 없으면 새 단어, 있으면 수정)
         function openModal(index = -1) {
-            editingIndex = index;
-            modal.style.display = 'flex';
-
+            editingIndex = index; modal.style.display = 'flex';
             if (index === -1) {
                 modalTitle.innerText = "새 단어 등록";
-                inputEn.value = '';
-                inputKo.value = '';
-                btnDelete.style.display = 'none'; // 새 단어 등록할 땐 삭제버튼 숨김
+                inputEn.value = ''; inputPron.value = ''; inputKo.value = ''; 
+                inputExEn.value = ''; inputExKo.value = ''; btnDelete.style.display = 'none';
             } else {
                 modalTitle.innerText = "단어 수정";
                 inputEn.value = wordList[index].en;
+                inputPron.value = wordList[index].pron || '';
                 inputKo.value = wordList[index].ko;
-                btnDelete.style.display = 'block'; // 수정할 땐 삭제버튼 표시
+                inputExEn.value = wordList[index].exEn || '';
+                inputExKo.value = wordList[index].exKo || '';
+                btnDelete.style.display = 'block';
             }
             inputEn.focus();
         }
 
-        function closeModal() {
-            modal.style.display = 'none';
-        }
+        function closeModal() { modal.style.display = 'none'; }
 
         function saveWord() {
-            const enText = inputEn.value.trim();
+            const enText = inputEn.value.trim(); const pronText = inputPron.value.trim(); 
             const koText = inputKo.value.trim();
+            const exEnText = inputExEn.value.trim(); const exKoText = inputExKo.value.trim();
 
-            if (enText === '' || koText === '') {
-                alert("영단어와 뜻을 모두 입력해주세요!");
-                return;
-            }
+            if (enText === '' || koText === '') { alert("영단어와 뜻은 필수로 입력해주세요!"); return; }
 
-            if (editingIndex === -1) {
-                // 새 단어 추가
-                wordList.push({ en: enText, ko: koText });
-            } else {
-                // 기존 단어 수정
-                wordList[editingIndex] = { en: enText, ko: koText };
-            }
+            const newWord = { en: enText, pron: pronText, ko: koText, exEn: exEnText, exKo: exKoText };
+            if (editingIndex === -1) { wordList.push(newWord); } else { wordList[editingIndex] = newWord; }
             
             saveAndReload();
-
-            // 새로 추가한 경우엔 맨 마지막으로 부드럽게 이동
-            if(editingIndex === -1) {
-                setTimeout(() => scrollToTarget(wordList.length - 1, 'smooth'), 100);
-            }
+            if(editingIndex === -1) { setTimeout(() => scrollToTarget(wordList.length - 1, 'smooth'), 100); }
         }
 
         function deleteWord() {
-            if(confirm("정말 이 단어를 삭제하시겠습니까?")) {
-                wordList.splice(editingIndex, 1); // 배열에서 삭제
-                saveAndReload();
-                // 삭제 후 이전 단어로 스크롤 맞춤
-                const targetIndex = Math.max(0, editingIndex - 1);
-                setTimeout(() => scrollToTarget(targetIndex, 'auto'), 100);
+            if(confirm("정말 삭제하시겠습니까?")) {
+                wordList.splice(editingIndex, 1); saveAndReload();
+                setTimeout(() => scrollToTarget(Math.max(0, editingIndex - 1), 'auto'), 100);
             }
         }
 
-        // 로컬 스토리지에 저장하고 화면 다시 그리기
         function saveAndReload() {
-            localStorage.setItem('myWordList', JSON.stringify(wordList));
-            renderWords();
-            closeModal();
+            localStorage.setItem('myWordList_v2', JSON.stringify(wordList));
+            renderWords(); closeModal();
         }
 
-        // 특정 인덱스 카드로 스크롤 이동 함수
         function scrollToTarget(index, behavior) {
             const targetCard = document.querySelector(`.card[data-index="${index}"]`);
-            if (targetCard) {
-                container.scrollTo({ top: targetCard.offsetTop, behavior: behavior });
-            }
+            if (targetCard) container.scrollTo({ top: targetCard.offsetTop, behavior: behavior });
         }
 
-
-        // --- 앱 시작 및 부가 기능 ---
         function initApp() {
             renderWords();
-            
-            // 껐다 켜도 마지막으로 보던 곳에서 정확히 시작
-            const savedIndex = localStorage.getItem('lastViewedWordIndex');
-            if (savedIndex !== null && wordList.length > 0) {
-                // 부드러운 스크롤 애니메이션 없이 즉시(auto) 그 위치에서 켜지도록 함
-                scrollToTarget(savedIndex, 'auto');
-            }
+            const savedIndex = localStorage.getItem('lastViewedWordIndex_v2');
+            if (savedIndex !== null && wordList.length > 0) scrollToTarget(savedIndex, 'auto');
         }
 
         function toggleDarkMode() { document.body.classList.toggle('dark-mode'); }
         function toggleFullScreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(err => alert("전체화면 지원 안됨"));
-            } else {
-                if (document.exitFullscreen) document.exitFullscreen();
-            }
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(err => alert("전체화면 지원 안됨"));
+            else if (document.exitFullscreen) document.exitFullscreen();
         }
 
         initApp();
     </script>
-
 </body>
 </html>
