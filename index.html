@@ -37,7 +37,7 @@
             border: none; padding: 8px 12px; border-radius: 8px;
             font-size: 0.9rem; font-weight: bold; cursor: pointer; transition: 0.3s;
         }
-        .controls button.shuffle-btn { background-color: #4CAF50; color: white; } /* 셔플 버튼은 초록색으로 강조 */
+        .controls button.shuffle-btn { background-color: #4CAF50; color: white; }
 
         .page-indicator {
             position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
@@ -72,7 +72,21 @@
         .word-row { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 2.2rem; font-weight: bold; word-break: keep-all;}
         .phonetic { font-size: 1rem; color: var(--hidden-text); font-weight: normal; }
         
-        .example-row { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 5px; }
+        /* 예문 가리기 기능 스타일 */
+        .example-container { margin-top: 15px; cursor: pointer; }
+        .example-placeholder {
+            display: inline-block; padding: 6px 16px;
+            background-color: var(--hidden-bg); color: var(--hidden-text);
+            border-radius: 20px; font-size: 0.95rem; font-weight: bold;
+            transition: filter 0.2s;
+        }
+        .example-placeholder:active { filter: brightness(0.9); }
+        .example-content { display: none; align-items: center; justify-content: center; gap: 6px; }
+        
+        /* show 클래스가 붙으면 버튼은 숨기고 예문을 보여줌 */
+        .example-container.show .example-placeholder { display: none; }
+        .example-container.show .example-content { display: flex; }
+
         .example { font-size: 1rem; color: var(--example-color); font-style: italic; line-height: 1.4; word-break: keep-all; text-align: center; }
 
         .tts-btn { background: none; border: none; font-size: 1.8rem; cursor: pointer; padding: 0; transition: transform 0.1s; }
@@ -127,7 +141,6 @@
         <button onclick="toggleDarkMode()">다크/라이트</button>
     </div>
 
-    <!-- 페이지 표시기 -->
     <div class="page-indicator" id="pageInfo" onclick="jumpToPage()" title="클릭하여 페이지 이동">0 / 0 🔍</div>
     <div class="shorts-container" id="appContainer"></div>
 
@@ -169,8 +182,25 @@
                 card.className = 'card'; card.dataset.index = index;
 
                 const pronHtml = item.pron ? `<div class="phonetic">${item.pron}</div>` : '';
-                const exEnHtml = item.exEn ? `<div class="example-row"><span class="example">"${item.exEn}"</span><button class="tts-btn small" onclick="speakText(this, event)" data-text="${item.exEn.replace(/"/g, '&quot;')}">🔊</button></div>` : '';
-                const exKoHtml = item.exKo ? `<div class="example-row"><span class="example">"${item.exKo}"</span><button class="tts-btn small" onclick="speakText(this, event)" data-text="${item.exKo.replace(/"/g, '&quot;')}">🔊</button></div>` : '';
+                
+                // 예문이 있을 경우, 처음에는 '💬 예문 보기' 버튼으로 렌더링
+                const exEnHtml = item.exEn ? `
+                    <div class="example-container" onclick="event.stopPropagation(); this.classList.toggle('show');">
+                        <div class="example-placeholder">💬 예문 보기</div>
+                        <div class="example-content">
+                            <span class="example">"${item.exEn}"</span>
+                            <button class="tts-btn small" onclick="speakText(this, event)" data-text="${item.exEn.replace(/"/g, '&quot;')}">🔊</button>
+                        </div>
+                    </div>` : '';
+                    
+                const exKoHtml = item.exKo ? `
+                    <div class="example-container" onclick="event.stopPropagation(); this.classList.toggle('show');">
+                        <div class="example-placeholder">💬 예문 해석 보기</div>
+                        <div class="example-content">
+                            <span class="example">"${item.exKo}"</span>
+                            <button class="tts-btn small" onclick="speakText(this, event)" data-text="${item.exKo.replace(/"/g, '&quot;')}">🔊</button>
+                        </div>
+                    </div>` : '';
 
                 card.innerHTML = `
                     <div class="text-box" onclick="this.classList.toggle('hidden')">
@@ -245,20 +275,14 @@
             }
         }
 
-        // --- 🔀 단어 랜덤 섞기 기능 ---
         function shuffleWords() {
-            if(wordList.length < 2) {
-                alert("섞을 단어가 부족합니다!");
-                return;
-            }
-            if(confirm("단어 순서를 무작위로 섞으시겠습니까? (위치로 외우는 것을 방지합니다)")) {
-                // 피셔-예이츠 셔플 알고리즘
+            if(wordList.length < 2) { alert("섞을 단어가 부족합니다!"); return; }
+            if(confirm("단어 순서를 무작위로 섞으시겠습니까?")) {
                 for (let i = wordList.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
                     [wordList[i], wordList[j]] = [wordList[j], wordList[i]];
                 }
                 saveAndReload();
-                // 섞은 후 1페이지(맨 위)로 이동
                 setTimeout(() => scrollToTarget(0, 'smooth'), 100);
             }
         }
@@ -272,7 +296,6 @@
             }
         }
 
-        // 모달 관련
         const modal = document.getElementById('wordModal');
         const modalTitle = document.getElementById('modalTitle');
         const inputEn = document.getElementById('inputEn');
