@@ -11,6 +11,7 @@
             --hidden-bg: #f5f5f5; --hidden-text: #aaaaaa;
             --modal-overlay: rgba(0, 0, 0, 0.6);
             --danger-color: #ff4757; --example-color: #555555;
+            --sub-btn-bg: #f0f0f0; --sub-btn-text: #444444;
         }
 
         body.dark-mode {
@@ -19,6 +20,7 @@
             --hidden-bg: #222222; --hidden-text: #555555;
             --modal-overlay: rgba(255, 255, 255, 0.2);
             --example-color: #bbbbbb;
+            --sub-btn-bg: #2a2a2a; --sub-btn-text: #cccccc;
         }
 
         body, html {
@@ -65,93 +67,92 @@
 
         .text-box {
             position: relative; overflow: hidden;
-            text-align: center; cursor: pointer; padding: 15px 20px;
-            border-radius: 12px; user-select: none; -webkit-tap-highlight-color: transparent;
+            text-align: center; cursor: pointer; padding: 18px 24px;
+            border-radius: 16px; user-select: none; -webkit-tap-highlight-color: transparent;
             min-width: 280px; max-width: 90%;
         }
         
-        .text-box .content { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-        .user-img { width: 140px; height: 140px; object-fit: cover; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .text-box .content { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .user-img { width: 140px; height: 140px; object-fit: cover; border-radius: 12px; margin-bottom: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
         .word-row { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 2.2rem; font-weight: bold; word-break: keep-all;}
-        .phonetic { font-size: 1rem; color: var(--hidden-text); font-weight: normal; }
+        .phonetic { font-size: 0.95rem; color: var(--hidden-text); font-weight: normal; }
         
-        /* 예문 가리기 & 가로 1줄 정렬 스타일 */
-        .example-container { margin-top: 12px; cursor: pointer; width: 100%; }
+        /* 학습 보조 버튼 그룹 (이미지, YouGlish, 움짤) */
+        .helper-btns {
+            display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; justify-content: center;
+        }
+        .helper-btn {
+            background-color: var(--sub-btn-bg);
+            color: var(--sub-btn-text);
+            border: none;
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .helper-btn:hover { filter: brightness(0.9); }
+
+        /* 부드러운 예문 전환 애니메이션 */
+        .example-container { margin-top: 10px; cursor: pointer; width: 100%; }
         .example-placeholder {
             display: inline-block; padding: 6px 16px;
             background-color: var(--hidden-bg); color: var(--hidden-text);
-            border-radius: 20px; font-size: 0.9rem; font-weight: bold;
-            transition: 0.2s ease;
+            border-radius: 20px; font-size: 0.88rem; font-weight: bold;
+            transition: all 0.2s ease;
         }
-        .example-placeholder:active { filter: brightness(0.9); }
+        .example-placeholder:active { transform: scale(0.96); }
         
-        /* 한 줄로 정렬되는 예문 박스 */
         .example-content { 
             display: none; 
             align-items: center; 
             justify-content: center; 
             gap: 6px; 
-            flex-direction: row; /* 가로 한 줄로 고정 */
+            flex-direction: row;
             max-width: 95%;
             margin: 0 auto;
+            opacity: 0;
+            transform: translateY(-4px);
+            transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .example-container.show .example-placeholder { display: none; }
         .example-container.show .example-content { 
             display: flex; 
-            animation: fadeInSmooth 0.25s ease-out forwards;
-        }
-
-        @keyframes fadeInSmooth {
-            from {
-                opacity: 0;
-                transform: scale(0.96);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
+            opacity: 1;
+            transform: translateY(0);
         }
 
         .example { 
             font-size: 0.95rem; 
             color: var(--example-color); 
             font-style: italic; 
-            line-height: 1.3; 
+            line-height: 1.35; 
             word-break: keep-all; 
             text-align: center; 
         }
 
-        .img-search-btn {
-            background-color: transparent;
-            color: var(--hidden-text);
-            border: 1px solid var(--hidden-text);
-            padding: 4px 10px;
-            border-radius: 15px;
-            font-size: 0.8rem;
-            cursor: pointer;
-            margin-top: 8px;
-            transition: 0.2s;
-        }
-        .img-search-btn:hover { background-color: var(--hidden-bg); color: var(--text-color); }
-
         .tts-btn { background: none; border: none; font-size: 1.8rem; cursor: pointer; padding: 0; transition: transform 0.1s; }
         .tts-btn:active { transform: scale(0.9); }
-        .tts-btn.small { font-size: 1.1rem; margin-top: 0; flex-shrink: 0; } 
+        .tts-btn.small { font-size: 1.1rem; flex-shrink: 0; } 
 
+        /* 가림막(커버) 부드러운 스위핑 효과 */
         .cover {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background-color: var(--hidden-bg); display: flex; justify-content: center; align-items: center;
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 10;
+            transition: transform 0.38s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+            z-index: 10;
+            opacity: 1;
         }
-        .cover .hint { font-size: 1.1rem; font-weight: bold; color: var(--hidden-text); }
-        .text-box.hidden .cover { transform: translateY(0); }
-        .text-box:not(.hidden) .cover { transform: translateY(-100%); }
+        .cover .hint { font-size: 1.05rem; font-weight: bold; color: var(--hidden-text); }
+        .text-box.hidden .cover { transform: translateY(0); opacity: 1; }
+        .text-box:not(.hidden) .cover { transform: translateY(-100%); opacity: 0; }
 
         .edit-btn {
             background: none; border: 1px solid var(--hidden-text);
             color: var(--hidden-text); padding: 5px 15px; border-radius: 20px;
-            font-size: 0.9rem; cursor: pointer; transition: 0.3s;
+            font-size: 0.88rem; cursor: pointer; transition: 0.2s;
         }
         .edit-btn:hover { background-color: var(--hidden-bg); }
 
@@ -258,7 +259,7 @@
                         <div class="example-placeholder">💬 예문 해석 보기</div>
                         <div class="example-content">
                             <span class="example">"${item.exKo}"</span>
-                            <button class="tts-btn small" onclick="speakText(this, event)" data-text="${item.exKo.replace(/"/g, '&quot;')}">🔊</button>
+                            <button class="tts-btn small" onclick="speakText(this, event)" data-text="${item.ko}">🔊</button>
                         </div>
                     </div>` : '';
 
@@ -268,7 +269,13 @@
                             ${imgHtml}
                             <div class="word-row">${item.en}<button class="tts-btn" onclick="speakText(this, event)" data-text="${item.en}">🔊</button></div>
                             ${pronHtml}
-                            <button class="img-search-btn" onclick="searchImage('${item.en}', event)">🖼️ 구글 이미지 보기</button>
+                            
+                            <div class="helper-btns">
+                                <button class="helper-btn" onclick="searchImage('${item.en}', event)">🖼️ 이미지</button>
+                                <button class="helper-btn" onclick="searchYouglish('${item.en}', event)">🎬 YouGlish 영상</button>
+                                <button class="helper-btn" onclick="searchGiphy('${item.en}', event)">🎞️ 움짤 상황</button>
+                            </div>
+                            
                             ${exEnHtml}
                         </div>
                         <div class="cover"><span class="hint">터치하여 단어 보기</span></div>
@@ -300,9 +307,20 @@
             });
         }, { threshold: 0.5 });
 
+        // --- 시각 & 문맥 학습 검색 함수 3종 ---
         function searchImage(word, event) {
             event.stopPropagation(); 
             window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(word)}`, '_blank');
+        }
+
+        function searchYouglish(word, event) {
+            event.stopPropagation();
+            window.open(`https://youglish.com/pronounce/${encodeURIComponent(word)}/english`, '_blank');
+        }
+
+        function searchGiphy(word, event) {
+            event.stopPropagation();
+            window.open(`https://giphy.com/search/${encodeURIComponent(word)}`, '_blank');
         }
 
         let voices = [];
