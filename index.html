@@ -8,19 +8,19 @@
         :root {
             --bg-color: #ffffff; --text-color: #000000;
             --btn-bg: #000000; --btn-text: #ffffff;
-            --hidden-bg: #f5f5f5; --hidden-text: #aaaaaa;
+            --hidden-bg: #f2f2f2; --hidden-text: #666666;
+            --border-color: #e2e2e2;
             --modal-overlay: rgba(0, 0, 0, 0.6);
             --danger-color: #ff4757; --example-color: #555555;
-            --sub-btn-bg: #f0f0f0; --sub-btn-text: #444444;
         }
 
         body.dark-mode {
-            --bg-color: #000000; --text-color: #ffffff;
+            --bg-color: #121212; --text-color: #ffffff;
             --btn-bg: #ffffff; --btn-text: #000000;
-            --hidden-bg: #222222; --hidden-text: #555555;
+            --hidden-bg: #222222; --hidden-text: #aaaaaa;
+            --border-color: #333333;
             --modal-overlay: rgba(255, 255, 255, 0.2);
             --example-color: #bbbbbb;
-            --sub-btn-bg: #2a2a2a; --sub-btn-text: #cccccc;
         }
 
         body, html {
@@ -33,11 +33,11 @@
         /* 상단 버튼들 */
         .controls {
             position: fixed; top: 20px; right: 20px; z-index: 100;
-            display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; max-width: 90%;
+            display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;
         }
         .controls button {
             background-color: var(--btn-bg); color: var(--btn-text);
-            border: none; padding: 8px 12px; border-radius: 8px;
+            border: none; padding: 8px 12px; border-radius: 6px;
             font-size: 0.9rem; font-weight: bold; cursor: pointer; transition: 0.3s;
         }
         .controls button.shuffle-btn { background-color: #4CAF50; color: white; }
@@ -50,131 +50,83 @@
             font-size: 1.1rem; z-index: 100; transition: 0.3s; opacity: 0.8;
             cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
         }
-        .page-indicator:active { transform: translateX(-50%) scale(0.95); }
 
         .shorts-container {
             width: 100%; height: 100vh; overflow-y: scroll;
-            scroll-snap-type: y mandatory; -ms-overflow-style: none; scrollbar-width: none;
-            scroll-behavior: smooth;
+            scroll-snap-type: y mandatory; scrollbar-width: none; scroll-behavior: smooth;
         }
         .shorts-container::-webkit-scrollbar { display: none; }
 
         .card {
             width: 100%; height: 100vh; scroll-snap-align: start;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            gap: 20px; position: relative;
+            gap: 15px; box-sizing: border-box; padding: 20px;
         }
 
-        .text-box {
-            position: relative; overflow: hidden;
-            text-align: center; cursor: pointer; padding: 18px 24px;
-            border-radius: 16px; user-select: none; -webkit-tap-highlight-color: transparent;
-            min-width: 280px; max-width: 90%;
-        }
-        
-        .text-box .content { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-        .user-img { width: 140px; height: 140px; object-fit: cover; border-radius: 12px; margin-bottom: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        .word-row { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 2.2rem; font-weight: bold; word-break: keep-all;}
-        .phonetic { font-size: 0.95rem; color: var(--hidden-text); font-weight: normal; }
-        
-        /* 학습 보조 버튼 그룹 (이미지, YouGlish, 움짤) */
+        /* 상단 보조 버튼 3종 (한 줄 고정) */
         .helper-btns {
-            display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; justify-content: center;
+            display: flex; gap: 6px; flex-wrap: nowrap; /* 줄바꿈 방지 */
+            justify-content: center; width: 100%; max-width: 300px;
+            box-sizing: border-box;
         }
         .helper-btn {
-            background-color: var(--sub-btn-bg);
-            color: var(--sub-btn-text);
-            border: none;
-            padding: 5px 10px;
-            border-radius: 12px;
-            font-size: 0.78rem;
-            font-weight: 600;
-            cursor: pointer;
+            flex: 1; white-space: nowrap; /* 텍스트 한줄 고정 */
+            background-color: transparent; color: var(--hidden-text);
+            border: 1px solid var(--border-color); padding: 6px 0; text-align: center;
+            border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer;
             transition: all 0.2s ease;
         }
-        .helper-btn:hover { filter: brightness(0.9); }
+        .helper-btn:hover { background-color: var(--hidden-bg); color: var(--text-color); }
 
-        /* 부드러운 예문 전환 애니메이션 */
-        .example-container { margin-top: 10px; cursor: pointer; width: 100%; }
-        .example-placeholder {
-            display: inline-block; padding: 6px 16px;
-            background-color: var(--hidden-bg); color: var(--hidden-text);
-            border-radius: 20px; font-size: 0.88rem; font-weight: bold;
-            transition: all 0.2s ease;
-        }
-        .example-placeholder:active { transform: scale(0.96); }
-        
-        .example-content { 
-            display: none; 
-            align-items: center; 
-            justify-content: center; 
-            gap: 6px; 
-            flex-direction: row;
-            max-width: 95%;
-            margin: 0 auto;
-            opacity: 0;
-            transform: translateY(-4px);
-            transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        /* 일체형 스택 블록 디자인 */
+        .stack-block {
+            width: 100%; max-width: 300px; border-radius: 12px; overflow: hidden;
+            border: 1px solid var(--border-color);
+            display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         }
 
-        .example-container.show .example-placeholder { display: none; }
-        .example-container.show .example-content { 
-            display: flex; 
-            opacity: 1;
-            transform: translateY(0);
+        /* 개별 줄 (열리면 배경이 흰색으로 지정됨) */
+        .stack-row {
+            position: relative; min-height: 58px; display: flex; align-items: center; justify-content: center;
+            border-bottom: 1px solid var(--border-color); cursor: pointer; user-select: none;
+            box-sizing: border-box; padding: 10px 15px; text-align: center;
+            background-color: var(--bg-color); /* 열렸을 때 흰색 배경 */
+            transition: background-color 0.3s ease;
+        }
+        .stack-row:last-child { border-bottom: none; }
+
+        /* 회색 가림막 (닫혔을 때 회색 배경) */
+        .row-cover {
+            position: absolute; inset: 0; background-color: var(--hidden-bg);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.95rem; font-weight: bold; color: var(--hidden-text);
+            transition: opacity 0.3s ease, visibility 0.3s ease; z-index: 2;
+            opacity: 1; visibility: visible;
         }
 
-        .example { 
-            font-size: 0.95rem; 
-            color: var(--example-color); 
-            font-style: italic; 
-            line-height: 1.35; 
-            word-break: keep-all; 
-            text-align: center; 
+        /* 실제 내용 (페이드인 전환) */
+        .row-content {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            width: 100%; opacity: 0; visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease; z-index: 1;
         }
 
-        .tts-btn { background: none; border: none; font-size: 1.8rem; cursor: pointer; padding: 0; transition: transform 0.1s; }
-        .tts-btn:active { transform: scale(0.9); }
-        .tts-btn.small { font-size: 1.1rem; flex-shrink: 0; } 
+        /* 열림(show) 상태: 회색 가림막이 사라지고 흰색 바탕의 내용이 표시됨 */
+        .stack-row.show .row-cover { opacity: 0; visibility: hidden; }
+        .stack-row.show .row-content { opacity: 1; visibility: visible; }
 
-        /* 가림막(커버) 부드러운 스위핑 효과 */
-        .cover {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: var(--hidden-bg); display: flex; justify-content: center; align-items: center;
-            transition: transform 0.38s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
-            z-index: 10;
-            opacity: 1;
-        }
-        .cover .hint { font-size: 1.05rem; font-weight: bold; color: var(--hidden-text); }
-        .text-box.hidden .cover { transform: translateY(0); opacity: 1; }
-        .text-box:not(.hidden) .cover { transform: translateY(-100%); opacity: 0; }
+        .word-text { font-size: 1.3rem; font-weight: bold; word-break: keep-all; }
+        .example-text { font-size: 0.92rem; color: var(--example-color); font-style: italic; line-height: 1.3; }
 
-        .edit-btn {
-            background: none; border: 1px solid var(--hidden-text);
-            color: var(--hidden-text); padding: 5px 15px; border-radius: 20px;
-            font-size: 0.88rem; cursor: pointer; transition: 0.2s;
-        }
-        .edit-btn:hover { background-color: var(--hidden-bg); }
+        .tts-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 0; flex-shrink: 0; }
+        .edit-btn { background: none; border: 1px solid var(--border-color); color: var(--hidden-text); padding: 5px 15px; border-radius: 6px; font-size: 0.85rem; cursor: pointer; }
 
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: var(--modal-overlay); display: none; justify-content: center; align-items: center; z-index: 200;
-        }
-        .modal {
-            background-color: var(--bg-color); padding: 25px; border-radius: 16px;
-            width: 85%; max-width: 320px; display: flex; flex-direction: column; gap: 10px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;
-        }
-        .modal h3 { margin: 0; text-align: center; font-size: 1.2rem; }
-        .modal input, .modal textarea {
-            padding: 10px; border: 1px solid var(--hidden-text); border-radius: 8px;
-            background-color: var(--bg-color); color: var(--text-color); font-size: 1rem; outline: none;
-            font-family: 'Pretendard', sans-serif;
-        }
-        .modal input:focus, .modal textarea:focus { border-color: var(--text-color); }
+        .modal-overlay { position: fixed; inset: 0; background-color: var(--modal-overlay); display: none; justify-content: center; align-items: center; z-index: 200; }
+        .modal { background-color: var(--bg-color); padding: 25px; border-radius: 12px; width: 85%; max-width: 320px; display: flex; flex-direction: column; gap: 10px; }
+        .modal input, .modal textarea { padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; background-color: var(--bg-color); color: var(--text-color); font-size: 1rem; outline: none; }
         .modal textarea { resize: none; height: 50px; }
-        .modal-btns { display: flex; gap: 8px; justify-content: center; margin-top: 5px; }
-        .modal-btns button { flex: 1; padding: 10px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
+        .modal-btns { display: flex; gap: 8px; margin-top: 5px; }
+        .modal-btns button { flex: 1; padding: 10px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; }
         .btn-cancel { background-color: var(--hidden-bg); color: var(--text-color); }
         .btn-save { background-color: var(--btn-bg); color: var(--btn-text); }
         .btn-delete { background-color: var(--danger-color); color: white; display: none; }
@@ -189,7 +141,7 @@
         <button onclick="toggleFullScreen()">전체화면</button> 
     </div>
 
-    <div class="page-indicator" id="pageInfo" onclick="jumpToPage()" title="클릭하여 페이지 이동">0 / 0 🔍</div>
+    <div class="page-indicator" id="pageInfo" onclick="jumpToPage()">0 / 0 🔍</div>
     <div class="shorts-container" id="appContainer"></div>
 
     <div class="modal-overlay" id="wordModal">
@@ -197,10 +149,9 @@
             <h3 id="modalTitle">새 단어 등록</h3>
             <input type="text" id="inputEn" placeholder="메인 단어 (필수)" autocomplete="off">
             <input type="text" id="inputPron" placeholder="발음기호 (선택)" autocomplete="off">
-            <input type="text" id="inputKo" placeholder="뜻 - 한/일 무관 (필수)" autocomplete="off">
+            <input type="text" id="inputKo" placeholder="뜻 (필수)" autocomplete="off">
             <textarea id="inputExEn" placeholder="메인 예문 (선택)"></textarea>
             <textarea id="inputExKo" placeholder="예문 뜻 (선택)"></textarea>
-            <input type="text" id="inputImg" placeholder="이미지 주소 URL (선택)" autocomplete="off">
             
             <div class="modal-btns">
                 <button id="btnDelete" class="btn-delete" onclick="deleteWord()">삭제</button>
@@ -213,16 +164,13 @@
     <script>
         const container = document.getElementById('appContainer');
         const pageInfo = document.getElementById('pageInfo');
-        
         let wordList = JSON.parse(localStorage.getItem('myWordList_v2')) || [];
 
-        if (wordList.length === 0 || (wordList.length === 3 && wordList[2].en === "다국어 혼합 테스트")) {
+        if (wordList.length === 0) {
             wordList = [
                 { en: "Figure out", pron: "[ˈfɪɡjər aʊt]", ko: "이해하다, 알아내다", exEn: "I need to figure out how this works.", exKo: "이게 어떻게 작동하는지 알아내야 해." },
                 { en: "Take over", pron: "[teɪk ˈoʊvər]", ko: "인계받다, 대신하다", exEn: "Can you take over my shift tomorrow?", exKo: "내일 제 교대근무 좀 대신해 줄 수 있나요?" },
-                { en: "Overwhelmed", pron: "[ˌoʊvərˈwelmd]", ko: "압도된, 벅찬", exEn: "I was a bit overwhelmed on my first day.", exKo: "첫날에는 일이 너무 벅차서 좀 압도당했어요." },
-                { en: "Sort out", pron: "[sɔːrt aʊt]", ko: "해결하다, 정리하다", exEn: "Don't worry, I'll sort it out.", exKo: "걱정 마요, 내가 해결할게요." },
-                { en: "Flexible", pron: "[ˈfleksəbl]", ko: "유연한, 융통성 있는", exEn: "My schedule is quite flexible this week.", exKo: "이번 주는 제 스케줄이 꽤 유동적이에요." }
+                { en: "Sort out", pron: "[sɔːrt aʊt]", ko: "해결하다, 정리하다", exEn: "Don't worry, I'll sort it out.", exKo: "걱정 마요, 내가 해결할게요." }
             ];
             localStorage.setItem('myWordList_v2', JSON.stringify(wordList));
         }
@@ -241,54 +189,53 @@
             wordList.forEach((item, index) => {
                 const card = document.createElement('div');
                 card.className = 'card'; card.dataset.index = index;
-
-                const imgHtml = item.img ? `<img src="${item.img}" class="user-img" alt="단어 이미지">` : '';
-                const pronHtml = item.pron ? `<div class="phonetic">${item.pron}</div>` : '';
-                
-                const exEnHtml = item.exEn ? `
-                    <div class="example-container" onclick="event.stopPropagation(); this.classList.toggle('show');">
-                        <div class="example-placeholder">💬 예문 보기</div>
-                        <div class="example-content">
-                            <span class="example">"${item.exEn}"</span>
-                            <button class="tts-btn small" onclick="speakText(this, event)" data-text="${item.exEn.replace(/"/g, '&quot;')}">🔊</button>
-                        </div>
-                    </div>` : '';
-                    
-                const exKoHtml = item.exKo ? `
-                    <div class="example-container" onclick="event.stopPropagation(); this.classList.toggle('show');">
-                        <div class="example-placeholder">💬 예문 해석 보기</div>
-                        <div class="example-content">
-                            <span class="example">"${item.exKo}"</span>
-                            <button class="tts-btn small" onclick="speakText(this, event)" data-text="${item.ko}">🔊</button>
-                        </div>
-                    </div>` : '';
+                const escapedEn = item.en.replace(/'/g, "\\'");
 
                 card.innerHTML = `
-                    <div class="text-box" onclick="this.classList.toggle('hidden')">
-                        <div class="content">
-                            ${imgHtml}
-                            <div class="word-row">${item.en}<button class="tts-btn" onclick="speakText(this, event)" data-text="${item.en}">🔊</button></div>
-                            ${pronHtml}
-                            
-                            <div class="helper-btns">
-                                <button class="helper-btn" onclick="searchImage('${item.en}', event)">🖼️ 이미지</button>
-                                <button class="helper-btn" onclick="searchYouglish('${item.en}', event)">🎬 YouGlish 영상</button>
-                                <button class="helper-btn" onclick="searchGiphy('${item.en}', event)">🎞️ 움짤 상황</button>
+                    <div class="helper-btns">
+                        <button class="helper-btn" onclick="searchImage('${escapedEn}', event)">🖼️ 이미지</button>
+                        <button class="helper-btn" onclick="searchYouglish('${escapedEn}', event)">🎬 YouGlish</button>
+                        <button class="helper-btn" onclick="searchGiphy('${escapedEn}', event)">🎞️ 움짤</button>
+                    </div>
+
+                    <div class="stack-block">
+                        <!-- 1. 영어단어 (기본 가려짐 상태) -->
+                        <div class="stack-row" onclick="this.classList.toggle('show')">
+                            <div class="row-cover">영어단어</div>
+                            <div class="row-content">
+                                <span class="word-text">${item.en}</span>
+                                <button class="tts-btn" onclick="speakText(this, event)" data-text="${item.en.replace(/"/g, '&quot;')}">🔊</button>
                             </div>
-                            
-                            ${exEnHtml}
                         </div>
-                        <div class="cover"><span class="hint">터치하여 단어 보기</span></div>
-                    </div>
-                    
-                    <div class="text-box hidden" onclick="this.classList.toggle('hidden')">
-                        <div class="content">
-                            <div class="word-row">${item.ko}<button class="tts-btn" onclick="speakText(this, event)" data-text="${item.ko}">🔊</button></div>
-                            ${exKoHtml}
+
+                        <!-- 2. 예문 (기본 가려짐 상태) -->
+                        <div class="stack-row" onclick="this.classList.toggle('show')">
+                            <div class="row-cover">예문</div>
+                            <div class="row-content">
+                                <span class="example-text">"${item.exEn || '예문 없음'}"</span>
+                                ${item.exEn ? `<button class="tts-btn" onclick="speakText(this, event)" data-text="${item.exEn.replace(/"/g, '&quot;')}">🔊</button>` : ''}
+                            </div>
                         </div>
-                        <div class="cover"><span class="hint">터치하여 뜻 보기</span></div>
+
+                        <!-- 3. 뜻 (기본 가려짐 상태) -->
+                        <div class="stack-row" onclick="this.classList.toggle('show')">
+                            <div class="row-cover">뜻</div>
+                            <div class="row-content">
+                                <span class="word-text">${item.ko}</span>
+                                <button class="tts-btn" onclick="speakText(this, event)" data-text="${item.ko.replace(/"/g, '&quot;')}">🔊</button>
+                            </div>
+                        </div>
+
+                        <!-- 4. 예문 뜻 (기본 가려짐 상태) -->
+                        <div class="stack-row" onclick="this.classList.toggle('show')">
+                            <div class="row-cover">예문 뜻</div>
+                            <div class="row-content">
+                                <span class="example-text">"${item.exKo || '예문 뜻 없음'}"</span>
+                                ${item.exKo ? `<button class="tts-btn" onclick="speakText(this, event)" data-text="${item.exKo.replace(/"/g, '&quot;')}">🔊</button>` : ''}
+                            </div>
+                        </div>
                     </div>
-                    
+
                     <button class="edit-btn" onclick="openModal(${index})">수정 / 삭제</button>
                 `;
                 container.appendChild(card); observer.observe(card);
@@ -307,21 +254,9 @@
             });
         }, { threshold: 0.5 });
 
-        // --- 시각 & 문맥 학습 검색 함수 3종 ---
-        function searchImage(word, event) {
-            event.stopPropagation(); 
-            window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(word)}`, '_blank');
-        }
-
-        function searchYouglish(word, event) {
-            event.stopPropagation();
-            window.open(`https://youglish.com/pronounce/${encodeURIComponent(word)}/english`, '_blank');
-        }
-
-        function searchGiphy(word, event) {
-            event.stopPropagation();
-            window.open(`https://giphy.com/search/${encodeURIComponent(word)}`, '_blank');
-        }
+        function searchImage(word, event) { event.stopPropagation(); window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(word)}`, '_blank'); }
+        function searchYouglish(word, event) { event.stopPropagation(); window.open(`https://youglish.com/pronounce/${encodeURIComponent(word)}/english`, '_blank'); }
+        function searchGiphy(word, event) { event.stopPropagation(); window.open(`https://giphy.com/search/${encodeURIComponent(word)}`, '_blank'); }
 
         let voices = [];
         function loadVoices() { voices = window.speechSynthesis.getVoices(); }
@@ -332,89 +267,71 @@
             event.stopPropagation();
             const rawText = btn.getAttribute('data-text');
             if(!rawText) return;
-            
             if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel(); 
-                
+                window.speechSynthesis.cancel();
                 setTimeout(() => {
                     const chunks = rawText.split('/');
-                    
                     chunks.forEach(chunk => {
                         const text = chunk.trim();
-                        if(!text) return; 
-
+                        if(!text) return;
                         const utterance = new SpeechSynthesisUtterance(text);
-                        
                         let detectedLang = 'en-US';
-                        if (/[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(text)) detectedLang = 'ja-JP'; 
+                        if (/[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(text)) detectedLang = 'ja-JP';
                         else if (/[가-힣]/.test(text)) detectedLang = 'ko-KR';
                         utterance.lang = detectedLang;
-
                         if (voices.length > 0) {
                             const voice = voices.find(v => v.lang.includes(detectedLang) || v.lang.includes(detectedLang.replace('-', '_')));
                             if (voice) utterance.voice = voice;
                         }
-
                         utterance.rate = 0.9;
-                        window.speechSynthesis.speak(utterance); 
+                        window.speechSynthesis.speak(utterance);
                     });
                 }, 50);
-            } else {
-                alert("음성 지원이 되지 않는 기기입니다.");
             }
         }
 
         function shuffleWords() {
-            if(wordList.length < 2) { alert("섞을 단어가 부족합니다!"); return; }
+            if(wordList.length < 2) return;
             if(confirm("단어 순서를 무작위로 섞으시겠습니까?")) {
                 for (let i = wordList.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
                     [wordList[i], wordList[j]] = [wordList[j], wordList[i]];
                 }
-                saveAndReload();
-                setTimeout(() => scrollToTarget(0, 'smooth'), 100);
+                saveAndReload(); setTimeout(() => scrollToTarget(0, 'smooth'), 100);
             }
         }
 
         function jumpToPage() {
-            const target = prompt(`이동할 페이지 번호를 입력하세요 (1 ~ ${totalWords})`);
-            if (target !== null && target.trim() !== '') {
+            const target = prompt(`이동할 페이지 번호 (1 ~ ${totalWords})`);
+            if (target) {
                 const pageNum = parseInt(target, 10);
                 if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalWords) scrollToTarget(pageNum - 1, 'smooth');
-                else alert(`1에서 ${totalWords} 사이의 숫자를 입력해주세요.`);
             }
         }
 
         function toggleFullScreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(err => alert("전체화면 지원 안됨"));
-            } else {
-                if (document.exitFullscreen) document.exitFullscreen();
-            }
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+            else if (document.exitFullscreen) document.exitFullscreen();
         }
 
         const modal = document.getElementById('wordModal');
-        const modalTitle = document.getElementById('modalTitle');
         const inputEn = document.getElementById('inputEn');
         const inputPron = document.getElementById('inputPron');
         const inputKo = document.getElementById('inputKo');
         const inputExEn = document.getElementById('inputExEn');
         const inputExKo = document.getElementById('inputExKo');
-        const inputImg = document.getElementById('inputImg'); 
         const btnDelete = document.getElementById('btnDelete');
         let editingIndex = -1;
 
         function openModal(index = -1) {
             editingIndex = index; modal.style.display = 'flex';
             if (index === -1) {
-                modalTitle.innerText = "새 단어 등록";
-                inputEn.value = ''; inputPron.value = ''; inputKo.value = ''; 
-                inputExEn.value = ''; inputExKo.value = ''; inputImg.value = ''; btnDelete.style.display = 'none';
+                document.getElementById('modalTitle').innerText = "새 단어 등록";
+                inputEn.value = ''; inputPron.value = ''; inputKo.value = ''; inputExEn.value = ''; inputExKo.value = ''; btnDelete.style.display = 'none';
             } else {
-                modalTitle.innerText = "단어 수정";
+                document.getElementById('modalTitle').innerText = "단어 수정";
                 inputEn.value = wordList[index].en; inputPron.value = wordList[index].pron || ''; inputKo.value = wordList[index].ko;
-                inputExEn.value = wordList[index].exEn || ''; inputExKo.value = wordList[index].exKo || ''; 
-                inputImg.value = wordList[index].img || ''; btnDelete.style.display = 'block';
+                inputExEn.value = wordList[index].exEn || ''; inputExKo.value = wordList[index].exKo || ''; btnDelete.style.display = 'block';
             }
             inputEn.focus();
         }
@@ -422,31 +339,23 @@
         function closeModal() { modal.style.display = 'none'; }
 
         function saveWord() {
-            const enText = inputEn.value.trim(); const pronText = inputPron.value.trim(); 
+            const enText = inputEn.value.trim(); const pronText = inputPron.value.trim();
             const koText = inputKo.value.trim(); const exEnText = inputExEn.value.trim(); const exKoText = inputExKo.value.trim();
-            const imgText = inputImg.value.trim();
-
-            if (enText === '' || koText === '') { alert("메인 단어와 뜻은 필수로 입력해주세요!"); return; }
-
-            const newWord = { en: enText, pron: pronText, ko: koText, exEn: exEnText, exKo: exKoText, img: imgText };
+            if (!enText || !koText) { alert("메인 단어와 뜻은 필수입니다."); return; }
+            const newWord = { en: enText, pron: pronText, ko: koText, exEn: exEnText, exKo: exKoText };
             if (editingIndex === -1) wordList.push(newWord); else wordList[editingIndex] = newWord;
-            
             saveAndReload();
             if(editingIndex === -1) setTimeout(() => scrollToTarget(wordList.length - 1, 'smooth'), 100);
         }
 
         function deleteWord() {
-            if(confirm("정말 삭제하시겠습니까?")) {
+            if(confirm("삭제하시겠습니까?")) {
                 wordList.splice(editingIndex, 1); saveAndReload();
                 setTimeout(() => scrollToTarget(Math.max(0, editingIndex - 1), 'auto'), 100);
             }
         }
 
-        function saveAndReload() {
-            localStorage.setItem('myWordList_v2', JSON.stringify(wordList));
-            renderWords(); closeModal();
-        }
-
+        function saveAndReload() { localStorage.setItem('myWordList_v2', JSON.stringify(wordList)); renderWords(); closeModal(); }
         function scrollToTarget(index, behavior) {
             const targetCard = document.querySelector(`.card[data-index="${index}"]`);
             if (targetCard) container.scrollTo({ top: targetCard.offsetTop, behavior: behavior });
@@ -459,7 +368,6 @@
         }
 
         function toggleDarkMode() { document.body.classList.toggle('dark-mode'); }
-
         initApp();
     </script>
 </body>
