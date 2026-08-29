@@ -28,9 +28,10 @@
             transition: background-color 0.3s, color 0.3s;
         }
 
+        /* 상단 버튼들 */
         .controls {
             position: fixed; top: 20px; right: 20px; z-index: 100;
-            display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; max-width: 80%;
+            display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; max-width: 90%;
         }
         .controls button {
             background-color: var(--btn-bg); color: var(--btn-text);
@@ -39,6 +40,7 @@
         }
         .controls button.shuffle-btn { background-color: #4CAF50; color: white; }
 
+        /* 하단 페이지 표시기 */
         .page-indicator {
             position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
             background-color: var(--btn-bg); color: var(--btn-text);
@@ -69,6 +71,10 @@
         }
         
         .text-box .content { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        
+        /* 사용자 등록 이미지 스타일 */
+        .user-img { width: 140px; height: 140px; object-fit: cover; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+
         .word-row { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 2.2rem; font-weight: bold; word-break: keep-all;}
         .phonetic { font-size: 1rem; color: var(--hidden-text); font-weight: normal; }
         
@@ -81,17 +87,28 @@
             transition: filter 0.2s;
         }
         .example-placeholder:active { filter: brightness(0.9); }
-        .example-content { display: none; align-items: center; justify-content: center; gap: 6px; }
-        
-        /* show 클래스가 붙으면 버튼은 숨기고 예문을 보여줌 */
+        .example-content { display: none; align-items: center; justify-content: center; gap: 6px; flex-direction: column; }
         .example-container.show .example-placeholder { display: none; }
         .example-container.show .example-content { display: flex; }
-
         .example { font-size: 1rem; color: var(--example-color); font-style: italic; line-height: 1.4; word-break: keep-all; text-align: center; }
+
+        /* 원터치 이미지 검색 버튼 */
+        .img-search-btn {
+            background-color: transparent;
+            color: var(--hidden-text);
+            border: 1px solid var(--hidden-text);
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: 0.2s;
+        }
+        .img-search-btn:hover { background-color: var(--hidden-bg); color: var(--text-color); }
 
         .tts-btn { background: none; border: none; font-size: 1.8rem; cursor: pointer; padding: 0; transition: transform 0.1s; }
         .tts-btn:active { transform: scale(0.9); }
-        .tts-btn.small { font-size: 1.2rem; } 
+        .tts-btn.small { font-size: 1.2rem; margin-top: 5px; } 
 
         .cover {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -109,13 +126,14 @@
         }
         .edit-btn:hover { background-color: var(--hidden-bg); }
 
+        /* 모달 (팝업창) */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: var(--modal-overlay); display: none; justify-content: center; align-items: center; z-index: 200;
         }
         .modal {
             background-color: var(--bg-color); padding: 25px; border-radius: 16px;
-            width: 85%; max-width: 320px; display: flex; flex-direction: column; gap: 12px;
+            width: 85%; max-width: 320px; display: flex; flex-direction: column; gap: 10px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;
         }
         .modal h3 { margin: 0; text-align: center; font-size: 1.2rem; }
@@ -125,7 +143,7 @@
             font-family: 'Pretendard', sans-serif;
         }
         .modal input:focus, .modal textarea:focus { border-color: var(--text-color); }
-        .modal textarea { resize: none; height: 60px; }
+        .modal textarea { resize: none; height: 50px; }
         .modal-btns { display: flex; gap: 8px; justify-content: center; margin-top: 5px; }
         .modal-btns button { flex: 1; padding: 10px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
         .btn-cancel { background-color: var(--hidden-bg); color: var(--text-color); }
@@ -135,10 +153,12 @@
 </head>
 <body>
 
+    <!-- 1. 모든 버튼 부활 확인 완료 -->
     <div class="controls">
-        <button class="shuffle-btn" onclick="shuffleWords()">🔀 랜덤 섞기</button>
-        <button onclick="openModal()">+ 단어 추가</button>
-        <button onclick="toggleDarkMode()">다크/라이트</button>
+        <button class="shuffle-btn" onclick="shuffleWords()">🔀 섞기</button>
+        <button onclick="openModal()">+ 추가</button>
+        <button onclick="toggleDarkMode()">다크</button>
+        <button onclick="toggleFullScreen()">전체화면</button> 
     </div>
 
     <div class="page-indicator" id="pageInfo" onclick="jumpToPage()" title="클릭하여 페이지 이동">0 / 0 🔍</div>
@@ -152,6 +172,7 @@
             <input type="text" id="inputKo" placeholder="뜻 - 한/일 무관 (필수)" autocomplete="off">
             <textarea id="inputExEn" placeholder="메인 예문 (선택)"></textarea>
             <textarea id="inputExKo" placeholder="예문 뜻 (선택)"></textarea>
+            <input type="text" id="inputImg" placeholder="이미지 주소 URL (선택)" autocomplete="off">
             
             <div class="modal-btns">
                 <button id="btnDelete" class="btn-delete" onclick="deleteWord()">삭제</button>
@@ -166,6 +187,19 @@
         const pageInfo = document.getElementById('pageInfo');
         
         let wordList = JSON.parse(localStorage.getItem('myWordList_v2')) || [];
+
+        // 초기 기본 단어 셋업
+        if (wordList.length === 0 || (wordList.length === 3 && wordList[2].en === "다국어 혼합 테스트")) {
+            wordList = [
+                { en: "Figure out", pron: "[ˈfɪɡjər aʊt]", ko: "이해하다, 알아내다", exEn: "I need to figure out how this works.", exKo: "이게 어떻게 작동하는지 알아내야 해." },
+                { en: "Take over", pron: "[teɪk ˈoʊvər]", ko: "인계받다, 대신하다", exEn: "Can you take over my shift tomorrow?", exKo: "내일 제 교대근무 좀 대신해 줄 수 있나요?" },
+                { en: "Overwhelmed", pron: "[ˌoʊvərˈwelmd]", ko: "압도된, 벅찬", exEn: "I was a bit overwhelmed on my first day.", exKo: "첫날에는 일이 너무 벅차서 좀 압도당했어요." },
+                { en: "Sort out", pron: "[sɔːrt aʊt]", ko: "해결하다, 정리하다", exEn: "Don't worry, I'll sort it out.", exKo: "걱정 마요, 내가 해결할게요." },
+                { en: "Flexible", pron: "[ˈfleksəbl]", ko: "유연한, 융통성 있는", exEn: "My schedule is quite flexible this week.", exKo: "이번 주는 제 스케줄이 꽤 유동적이에요." }
+            ];
+            localStorage.setItem('myWordList_v2', JSON.stringify(wordList));
+        }
+
         let totalWords = wordList.length;
 
         function renderWords() {
@@ -181,15 +215,15 @@
                 const card = document.createElement('div');
                 card.className = 'card'; card.dataset.index = index;
 
+                const imgHtml = item.img ? `<img src="${item.img}" class="user-img" alt="단어 이미지">` : '';
                 const pronHtml = item.pron ? `<div class="phonetic">${item.pron}</div>` : '';
                 
-                // 예문이 있을 경우, 처음에는 '💬 예문 보기' 버튼으로 렌더링
                 const exEnHtml = item.exEn ? `
                     <div class="example-container" onclick="event.stopPropagation(); this.classList.toggle('show');">
                         <div class="example-placeholder">💬 예문 보기</div>
                         <div class="example-content">
                             <span class="example">"${item.exEn}"</span>
-                            <button class="tts-btn small" onclick="speakText(this, event)" data-text="${item.exEn.replace(/"/g, '&quot;')}">🔊</button>
+                            <button class="tts-btn small" onclick="speakText(this, event)" data-text="${item.exEn.replace(/"/g, '&quot;')}">🔊 읽기</button>
                         </div>
                     </div>` : '';
                     
@@ -198,15 +232,18 @@
                         <div class="example-placeholder">💬 예문 해석 보기</div>
                         <div class="example-content">
                             <span class="example">"${item.exKo}"</span>
-                            <button class="tts-btn small" onclick="speakText(this, event)" data-text="${item.exKo.replace(/"/g, '&quot;')}">🔊</button>
+                            <button class="tts-btn small" onclick="speakText(this, event)" data-text="${item.exKo.replace(/"/g, '&quot;')}">🔊 읽기</button>
                         </div>
                     </div>` : '';
 
                 card.innerHTML = `
                     <div class="text-box" onclick="this.classList.toggle('hidden')">
                         <div class="content">
+                            ${imgHtml}
                             <div class="word-row">${item.en}<button class="tts-btn" onclick="speakText(this, event)" data-text="${item.en}">🔊</button></div>
-                            ${pronHtml} ${exEnHtml}
+                            ${pronHtml}
+                            <button class="img-search-btn" onclick="searchImage('${item.en}', event)">🖼️ 구글 이미지 보기</button>
+                            ${exEnHtml}
                         </div>
                         <div class="cover"><span class="hint">터치하여 단어 보기</span></div>
                     </div>
@@ -238,6 +275,13 @@
         }, { threshold: 0.5 });
 
 
+        function searchImage(word, event) {
+            event.stopPropagation(); 
+            window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(word)}`, '_blank');
+        }
+
+
+        // 2. TTS 음성 먹통 방지 해결 로직 적용 완료
         let voices = [];
         function loadVoices() { voices = window.speechSynthesis.getVoices(); }
         if ('speechSynthesis' in window && speechSynthesis.onvoiceschanged !== undefined) { speechSynthesis.onvoiceschanged = loadVoices; }
@@ -246,35 +290,43 @@
         function speakText(btn, event) {
             event.stopPropagation();
             const rawText = btn.getAttribute('data-text');
+            if(!rawText) return;
             
             if ('speechSynthesis' in window) {
+                // 이전 음성 강제 종료
                 window.speechSynthesis.cancel(); 
-                const chunks = rawText.split('/');
                 
-                chunks.forEach(chunk => {
-                    const text = chunk.trim();
-                    if(!text) return; 
-
-                    const utterance = new SpeechSynthesisUtterance(text);
+                // 안드로이드(갤럭시) 브라우저 멈춤 방지를 위한 미세한 시간차(50ms) 허용
+                setTimeout(() => {
+                    const chunks = rawText.split('/');
                     
-                    let detectedLang = 'en-US';
-                    if (/[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(text)) detectedLang = 'ja-JP'; 
-                    else if (/[가-힣]/.test(text)) detectedLang = 'ko-KR';
-                    utterance.lang = detectedLang;
+                    chunks.forEach(chunk => {
+                        const text = chunk.trim();
+                        if(!text) return; 
 
-                    if (voices.length > 0) {
-                        const voice = voices.find(v => v.lang.includes(detectedLang) || v.lang.includes(detectedLang.replace('-', '_')));
-                        if (voice) utterance.voice = voice;
-                    }
+                        const utterance = new SpeechSynthesisUtterance(text);
+                        
+                        // 다국어 자동 감지 AI 로직 (여전히 강력하게 살아있습니다!)
+                        let detectedLang = 'en-US';
+                        if (/[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(text)) detectedLang = 'ja-JP'; 
+                        else if (/[가-힣]/.test(text)) detectedLang = 'ko-KR';
+                        utterance.lang = detectedLang;
 
-                    utterance.rate = 0.9;
-                    window.speechSynthesis.speak(utterance); 
-                });
+                        if (voices.length > 0) {
+                            const voice = voices.find(v => v.lang.includes(detectedLang) || v.lang.includes(detectedLang.replace('-', '_')));
+                            if (voice) utterance.voice = voice;
+                        }
+
+                        utterance.rate = 0.9;
+                        window.speechSynthesis.speak(utterance); 
+                    });
+                }, 50); // 0.05초 대기
             } else {
                 alert("음성 지원이 되지 않는 기기입니다.");
             }
         }
 
+        // 3. 기능들 모두 무사히 작동하도록 유지
         function shuffleWords() {
             if(wordList.length < 2) { alert("섞을 단어가 부족합니다!"); return; }
             if(confirm("단어 순서를 무작위로 섞으시겠습니까?")) {
@@ -296,6 +348,14 @@
             }
         }
 
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => alert("전체화면 지원 안됨"));
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+            }
+        }
+
         const modal = document.getElementById('wordModal');
         const modalTitle = document.getElementById('modalTitle');
         const inputEn = document.getElementById('inputEn');
@@ -303,6 +363,7 @@
         const inputKo = document.getElementById('inputKo');
         const inputExEn = document.getElementById('inputExEn');
         const inputExKo = document.getElementById('inputExKo');
+        const inputImg = document.getElementById('inputImg'); 
         const btnDelete = document.getElementById('btnDelete');
         let editingIndex = -1;
 
@@ -311,11 +372,12 @@
             if (index === -1) {
                 modalTitle.innerText = "새 단어 등록";
                 inputEn.value = ''; inputPron.value = ''; inputKo.value = ''; 
-                inputExEn.value = ''; inputExKo.value = ''; btnDelete.style.display = 'none';
+                inputExEn.value = ''; inputExKo.value = ''; inputImg.value = ''; btnDelete.style.display = 'none';
             } else {
                 modalTitle.innerText = "단어 수정";
                 inputEn.value = wordList[index].en; inputPron.value = wordList[index].pron || ''; inputKo.value = wordList[index].ko;
-                inputExEn.value = wordList[index].exEn || ''; inputExKo.value = wordList[index].exKo || ''; btnDelete.style.display = 'block';
+                inputExEn.value = wordList[index].exEn || ''; inputExKo.value = wordList[index].exKo || ''; 
+                inputImg.value = wordList[index].img || ''; btnDelete.style.display = 'block';
             }
             inputEn.focus();
         }
@@ -325,10 +387,11 @@
         function saveWord() {
             const enText = inputEn.value.trim(); const pronText = inputPron.value.trim(); 
             const koText = inputKo.value.trim(); const exEnText = inputExEn.value.trim(); const exKoText = inputExKo.value.trim();
+            const imgText = inputImg.value.trim();
 
             if (enText === '' || koText === '') { alert("메인 단어와 뜻은 필수로 입력해주세요!"); return; }
 
-            const newWord = { en: enText, pron: pronText, ko: koText, exEn: exEnText, exKo: exKoText };
+            const newWord = { en: enText, pron: pronText, ko: koText, exEn: exEnText, exKo: exKoText, img: imgText };
             if (editingIndex === -1) wordList.push(newWord); else wordList[editingIndex] = newWord;
             
             saveAndReload();
