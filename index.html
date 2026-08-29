@@ -6,24 +6,17 @@
     <title>심플 영단어장 - 워홀 마스터</title>
     <style>
         :root {
-            --bg-color: #ffffff;
-            --text-color: #000000;
-            --btn-bg: #000000;
-            --btn-text: #ffffff;
-            --hidden-bg: #f5f5f5;
-            --hidden-text: #aaaaaa;
+            --bg-color: #ffffff; --text-color: #000000;
+            --btn-bg: #000000; --btn-text: #ffffff;
+            --hidden-bg: #f5f5f5; --hidden-text: #aaaaaa;
             --modal-overlay: rgba(0, 0, 0, 0.6);
-            --danger-color: #ff4757;
-            --example-color: #555555;
+            --danger-color: #ff4757; --example-color: #555555;
         }
 
         body.dark-mode {
-            --bg-color: #000000;
-            --text-color: #ffffff;
-            --btn-bg: #ffffff;
-            --btn-text: #000000;
-            --hidden-bg: #222222;
-            --hidden-text: #555555;
+            --bg-color: #000000; --text-color: #ffffff;
+            --btn-bg: #ffffff; --btn-text: #000000;
+            --hidden-bg: #222222; --hidden-text: #555555;
             --modal-overlay: rgba(255, 255, 255, 0.2);
             --example-color: #bbbbbb;
         }
@@ -37,15 +30,15 @@
 
         .controls {
             position: fixed; top: 20px; right: 20px; z-index: 100;
-            display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;
+            display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; max-width: 80%;
         }
         .controls button {
             background-color: var(--btn-bg); color: var(--btn-text);
             border: none; padding: 8px 12px; border-radius: 8px;
             font-size: 0.9rem; font-weight: bold; cursor: pointer; transition: 0.3s;
         }
+        .controls button.shuffle-btn { background-color: #4CAF50; color: white; } /* 셔플 버튼은 초록색으로 강조 */
 
-        /* 페이지 표시기 (이제 클릭 가능한 버튼입니다) */
         .page-indicator {
             position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
             background-color: var(--btn-bg); color: var(--btn-text);
@@ -129,12 +122,12 @@
 <body>
 
     <div class="controls">
+        <button class="shuffle-btn" onclick="shuffleWords()">🔀 랜덤 섞기</button>
         <button onclick="openModal()">+ 단어 추가</button>
         <button onclick="toggleDarkMode()">다크/라이트</button>
-        <button onclick="toggleFullScreen()">전체화면</button>
     </div>
 
-    <!-- 페이지 표시기 (클릭 이벤트 추가됨) -->
+    <!-- 페이지 표시기 -->
     <div class="page-indicator" id="pageInfo" onclick="jumpToPage()" title="클릭하여 페이지 이동">0 / 0 🔍</div>
     <div class="shorts-container" id="appContainer"></div>
 
@@ -159,18 +152,7 @@
         const container = document.getElementById('appContainer');
         const pageInfo = document.getElementById('pageInfo');
         
-        let wordList = JSON.parse(localStorage.getItem('myWordList_v2'));
-        
-        if (!wordList || wordList.length === 0) {
-            wordList = [
-                { en: "Figure out", pron: "[ˈfɪɡjər aʊt]", ko: "이해하다, 알아내다", exEn: "I need to figure out how this works.", exKo: "이게 어떻게 작동하는지 알아내야 해." },
-                { en: "Take over", pron: "[teɪk ˈoʊvər]", ko: "인계받다, 대신하다", exEn: "Can you take over my shift?", exKo: "내 교대근무 좀 대신해 줄래?" },
-                // 다국어 릴레이 발음 테스트용 기본 데이터
-                { en: "다국어 혼합 테스트", pron: "", ko: "私が手伝いましょうか？ / 제가 도와드릴까요? / Can I help you?", exEn: "", exKo: "" }
-            ];
-            localStorage.setItem('myWordList_v2', JSON.stringify(wordList));
-        }
-
+        let wordList = JSON.parse(localStorage.getItem('myWordList_v2')) || [];
         let totalWords = wordList.length;
 
         function renderWords() {
@@ -187,38 +169,21 @@
                 card.className = 'card'; card.dataset.index = index;
 
                 const pronHtml = item.pron ? `<div class="phonetic">${item.pron}</div>` : '';
-                
-                const exEnHtml = item.exEn ? `
-                    <div class="example-row">
-                        <span class="example">"${item.exEn}"</span>
-                        <button class="tts-btn small" onclick="speakText(this, event)" data-text="${item.exEn.replace(/"/g, '&quot;')}">🔊</button>
-                    </div>` : '';
-                    
-                const exKoHtml = item.exKo ? `
-                    <div class="example-row">
-                        <span class="example">"${item.exKo}"</span>
-                        <button class="tts-btn small" onclick="speakText(this, event)" data-text="${item.exKo.replace(/"/g, '&quot;')}">🔊</button>
-                    </div>` : '';
+                const exEnHtml = item.exEn ? `<div class="example-row"><span class="example">"${item.exEn}"</span><button class="tts-btn small" onclick="speakText(this, event)" data-text="${item.exEn.replace(/"/g, '&quot;')}">🔊</button></div>` : '';
+                const exKoHtml = item.exKo ? `<div class="example-row"><span class="example">"${item.exKo}"</span><button class="tts-btn small" onclick="speakText(this, event)" data-text="${item.exKo.replace(/"/g, '&quot;')}">🔊</button></div>` : '';
 
                 card.innerHTML = `
                     <div class="text-box" onclick="this.classList.toggle('hidden')">
                         <div class="content">
-                            <div class="word-row">
-                                ${item.en}
-                                <button class="tts-btn" onclick="speakText(this, event)" data-text="${item.en}">🔊</button>
-                            </div>
-                            ${pronHtml}
-                            ${exEnHtml}
+                            <div class="word-row">${item.en}<button class="tts-btn" onclick="speakText(this, event)" data-text="${item.en}">🔊</button></div>
+                            ${pronHtml} ${exEnHtml}
                         </div>
                         <div class="cover"><span class="hint">터치하여 단어 보기</span></div>
                     </div>
                     
                     <div class="text-box hidden" onclick="this.classList.toggle('hidden')">
                         <div class="content">
-                            <div class="word-row">
-                                ${item.ko}
-                                <button class="tts-btn" onclick="speakText(this, event)" data-text="${item.ko}">🔊</button>
-                            </div>
+                            <div class="word-row">${item.ko}<button class="tts-btn" onclick="speakText(this, event)" data-text="${item.ko}">🔊</button></div>
                             ${exKoHtml}
                         </div>
                         <div class="cover"><span class="hint">터치하여 뜻 보기</span></div>
@@ -245,35 +210,26 @@
 
         let voices = [];
         function loadVoices() { voices = window.speechSynthesis.getVoices(); }
-        if ('speechSynthesis' in window && speechSynthesis.onvoiceschanged !== undefined) {
-            speechSynthesis.onvoiceschanged = loadVoices;
-        }
+        if ('speechSynthesis' in window && speechSynthesis.onvoiceschanged !== undefined) { speechSynthesis.onvoiceschanged = loadVoices; }
         loadVoices();
 
-        // --- 다국어 슬래시(/) 분할 읽기 지원 ---
         function speakText(btn, event) {
             event.stopPropagation();
             const rawText = btn.getAttribute('data-text');
             
             if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel(); // 기존 발음 멈춤
-                
-                // 슬래시(/)를 기준으로 문장을 여러 조각으로 나눔
+                window.speechSynthesis.cancel(); 
                 const chunks = rawText.split('/');
                 
                 chunks.forEach(chunk => {
                     const text = chunk.trim();
-                    if(!text) return; // 빈 칸이면 건너뜀
+                    if(!text) return; 
 
                     const utterance = new SpeechSynthesisUtterance(text);
                     
-                    // 각 조각(chunk)마다 언어를 새로 판별
                     let detectedLang = 'en-US';
-                    if (/[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(text)) {
-                        detectedLang = 'ja-JP'; 
-                    } else if (/[가-힣]/.test(text)) {
-                        detectedLang = 'ko-KR';
-                    }
+                    if (/[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(text)) detectedLang = 'ja-JP'; 
+                    else if (/[가-힣]/.test(text)) detectedLang = 'ko-KR';
                     utterance.lang = detectedLang;
 
                     if (voices.length > 0) {
@@ -282,26 +238,41 @@
                     }
 
                     utterance.rate = 0.9;
-                    window.speechSynthesis.speak(utterance); // 차례대로 예약되어 순서대로 재생됨
+                    window.speechSynthesis.speak(utterance); 
                 });
             } else {
-                alert("현재 기기에서 음성 지원이 되지 않습니다.");
+                alert("음성 지원이 되지 않는 기기입니다.");
             }
         }
 
-        // --- 페이지 이동 기능 ---
+        // --- 🔀 단어 랜덤 섞기 기능 ---
+        function shuffleWords() {
+            if(wordList.length < 2) {
+                alert("섞을 단어가 부족합니다!");
+                return;
+            }
+            if(confirm("단어 순서를 무작위로 섞으시겠습니까? (위치로 외우는 것을 방지합니다)")) {
+                // 피셔-예이츠 셔플 알고리즘
+                for (let i = wordList.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [wordList[i], wordList[j]] = [wordList[j], wordList[i]];
+                }
+                saveAndReload();
+                // 섞은 후 1페이지(맨 위)로 이동
+                setTimeout(() => scrollToTarget(0, 'smooth'), 100);
+            }
+        }
+
         function jumpToPage() {
             const target = prompt(`이동할 페이지 번호를 입력하세요 (1 ~ ${totalWords})`);
             if (target !== null && target.trim() !== '') {
                 const pageNum = parseInt(target, 10);
-                if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalWords) {
-                    scrollToTarget(pageNum - 1, 'smooth');
-                } else {
-                    alert(`1에서 ${totalWords} 사이의 숫자를 입력해주세요.`);
-                }
+                if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalWords) scrollToTarget(pageNum - 1, 'smooth');
+                else alert(`1에서 ${totalWords} 사이의 숫자를 입력해주세요.`);
             }
         }
 
+        // 모달 관련
         const modal = document.getElementById('wordModal');
         const modalTitle = document.getElementById('modalTitle');
         const inputEn = document.getElementById('inputEn');
@@ -320,12 +291,8 @@
                 inputExEn.value = ''; inputExKo.value = ''; btnDelete.style.display = 'none';
             } else {
                 modalTitle.innerText = "단어 수정";
-                inputEn.value = wordList[index].en;
-                inputPron.value = wordList[index].pron || '';
-                inputKo.value = wordList[index].ko;
-                inputExEn.value = wordList[index].exEn || '';
-                inputExKo.value = wordList[index].exKo || '';
-                btnDelete.style.display = 'block';
+                inputEn.value = wordList[index].en; inputPron.value = wordList[index].pron || ''; inputKo.value = wordList[index].ko;
+                inputExEn.value = wordList[index].exEn || ''; inputExKo.value = wordList[index].exKo || ''; btnDelete.style.display = 'block';
             }
             inputEn.focus();
         }
@@ -334,16 +301,15 @@
 
         function saveWord() {
             const enText = inputEn.value.trim(); const pronText = inputPron.value.trim(); 
-            const koText = inputKo.value.trim();
-            const exEnText = inputExEn.value.trim(); const exKoText = inputExKo.value.trim();
+            const koText = inputKo.value.trim(); const exEnText = inputExEn.value.trim(); const exKoText = inputExKo.value.trim();
 
             if (enText === '' || koText === '') { alert("메인 단어와 뜻은 필수로 입력해주세요!"); return; }
 
             const newWord = { en: enText, pron: pronText, ko: koText, exEn: exEnText, exKo: exKoText };
-            if (editingIndex === -1) { wordList.push(newWord); } else { wordList[editingIndex] = newWord; }
+            if (editingIndex === -1) wordList.push(newWord); else wordList[editingIndex] = newWord;
             
             saveAndReload();
-            if(editingIndex === -1) { setTimeout(() => scrollToTarget(wordList.length - 1, 'smooth'), 100); }
+            if(editingIndex === -1) setTimeout(() => scrollToTarget(wordList.length - 1, 'smooth'), 100);
         }
 
         function deleteWord() {
@@ -370,10 +336,6 @@
         }
 
         function toggleDarkMode() { document.body.classList.toggle('dark-mode'); }
-        function toggleFullScreen() {
-            if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(err => alert("전체화면 지원 안됨"));
-            else if (document.exitFullscreen) document.exitFullscreen();
-        }
 
         initApp();
     </script>
