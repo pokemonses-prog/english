@@ -3,23 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>심플 영단어장 - 집중 모드</title>
+    <title>심플 영단어장 - 클라우드 동기화</title>
+
+    <!-- Firebase SDK (기기 간 실시간 동기화 및 구글 로그인) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
     <style>
         :root {
             --bg-color: #f4f5f7; --text-color: #111111;
-            --card-bg: #ffffff; --btn-bg: #222222; --btn-text: #ffffff;
-            --hidden-bg: #eaeaec; --hidden-text: #666666;
-            --border-color: #d1d5db; --input-bg: #ffffff;
+            --card-bg: #ffffff; --btn-bg: #333333; --btn-text: #ffffff;
+            --hidden-bg: #e2e2e2; --hidden-text: #555555;
+            --border-color: #cccccc; --input-bg: #ffffff;
             --modal-overlay: rgba(0, 0, 0, 0.5);
-            --danger-color: #e74c3c; --correct-color: #27ae60;
-            --info-color: #2980b9; --example-color: #7f8c8d;
+            /* 정답/오답 색상도 채도를 낮춰서 눈을 편안하게 조정 */
+            --danger-color: #c0392b; --correct-color: #27ae60;
+            --info-color: #555555; --example-color: #7f8c8d;
         }
 
         body.dark-mode {
             --bg-color: #121212; --text-color: #e0e0e0;
             --card-bg: #1e1e1e; --btn-bg: #e0e0e0; --btn-text: #121212;
-            --hidden-bg: #2a2a2a; --hidden-text: #999999;
-            --border-color: #333333; --input-bg: #121212;
+            --hidden-bg: #2a2a2a; --hidden-text: #aaaaaa;
+            --border-color: #3a3a3a; --input-bg: #121212;
             --modal-overlay: rgba(255, 255, 255, 0.2);
             --example-color: #888888;
         }
@@ -31,7 +38,7 @@
             transition: background-color 0.2s, color 0.2s;
         }
 
-        /* 튀는 색상을 빼고 모노톤으로 정돈한 상단 컨트롤 버튼 */
+        /* 튀는 색상을 완전히 배제한 모노톤 컨트롤 버튼 */
         .controls {
             position: fixed; top: 0; left: 0; right: 0; z-index: 100;
             display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;
@@ -46,8 +53,8 @@
         .controls button:hover {
             background-color: var(--hidden-bg);
         }
-        /* 오답노트 활성화 시 색상 반전으로만 표현 (눈아픔 방지) */
-        .controls button.wrong-btn.active { 
+        /* 활성화된 버튼(오답노트 등)은 색상 반전으로만 표현 */
+        .controls button.active-btn { 
             background-color: var(--text-color); 
             color: var(--bg-color); 
             border-color: var(--text-color);
@@ -73,7 +80,7 @@
         .example-text { font-size: 0.8rem; color: var(--example-color); font-style: italic; line-height: 1.3;}
         
         .tts-btn { background: none; border: none; font-size: 1rem; cursor: pointer; padding: 0; }
-        .error-badge { background-color: rgba(231, 76, 60, 0.1); color: var(--danger-color); font-size: 0.7rem; padding: 2px 6px; border-radius: 10px; font-weight: bold; }
+        .error-badge { background-color: var(--hidden-bg); color: var(--text-color); font-size: 0.7rem; padding: 2px 6px; border-radius: 10px; font-weight: bold; }
 
         .delete-btn { background: none; border: none; color: var(--hidden-text); font-size: 0.75rem; cursor: pointer; text-decoration: underline; padding: 0;}
         .delete-btn:hover { color: var(--danger-color); }
@@ -86,35 +93,28 @@
         }
         .dict-input:focus { border-color: var(--text-color); border-width: 1.5px; padding: 7.5px 9.5px; }
         .dict-input.correct { border-color: var(--correct-color); background-color: rgba(39, 174, 96, 0.05); }
-        .dict-input.wrong { border-color: var(--danger-color); background-color: rgba(231, 76, 60, 0.05); }
+        .dict-input.wrong { border-color: var(--danger-color); background-color: rgba(192, 57, 43, 0.05); }
 
         .result-msg { margin-top: 4px; font-size: 0.8rem; font-weight: bold; min-height: 1.1rem; display: flex; align-items: center; }
         .full-meaning { font-weight: normal; color: var(--info-color); margin-left: 5px; font-size: 0.75rem; }
-        body.dark-mode .full-meaning { color: #5dade2; } 
+        body.dark-mode .full-meaning { color: #aaaaaa; } 
 
         .modal-overlay { position: fixed; inset: 0; background-color: var(--modal-overlay); display: none; justify-content: center; align-items: center; z-index: 200; }
         .modal { background-color: var(--card-bg); padding: 15px; border-radius: 8px; width: 85%; max-width: 320px; display: flex; flex-direction: column; gap: 8px; }
         .modal h3 { margin: 0 0 5px 0; text-align: center; font-size: 1rem; }
-        .modal input, .modal textarea { padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; background-color: var(--input-bg); color: var(--text-color); font-size: 0.9rem; outline: none; }
-        .modal textarea { height: 100px; resize: none; font-family: monospace; font-size: 0.8rem; }
+        .modal input { padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; background-color: var(--input-bg); color: var(--text-color); font-size: 0.9rem; outline: none; }
         .modal-btns { display: flex; gap: 6px; margin-top: 5px; }
         .modal-btns button { flex: 1; padding: 8px; border-radius: 4px; border: none; font-weight: bold; cursor: pointer; }
         .btn-cancel { background-color: var(--hidden-bg); color: var(--text-color); }
         .btn-save { background-color: var(--btn-bg); color: var(--btn-text); }
         
-        .copy-btn {
-            background-color: var(--hidden-bg); color: var(--text-color);
-            border: 1px solid var(--border-color); padding: 5px 10px;
-            border-radius: 4px; font-size: 0.75rem; cursor: pointer; font-weight: bold;
-        }
-
-        /* 거추장스러운 알림 대신 쓸 토스트 메시지 UI */
+        /* 토스트 메시지 UI (팝업창 대체) */
         #toast {
             position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
             background-color: rgba(0, 0, 0, 0.8); color: white;
-            padding: 10px 20px; border-radius: 20px; font-size: 0.9rem;
+            padding: 10px 20px; border-radius: 20px; font-size: 0.85rem;
             z-index: 999; opacity: 0; visibility: hidden; transition: 0.3s;
-            pointer-events: none;
+            pointer-events: none; white-space: nowrap;
         }
         #toast.show { opacity: 1; visibility: visible; }
     </style>
@@ -123,25 +123,27 @@
 
     <div class="controls">
         <button onclick="toggleMode()" id="modeBtn">🅰️ 외 ➔ 한</button>
-        <button class="wrong-btn" onclick="toggleWrongMode()" id="wrongBtn">📖 오답노트</button>
+        <button onclick="toggleWrongMode()" id="wrongBtn">📖 오답노트</button>
         <button onclick="shuffleWords()">🔀 섞기</button>
         <button onclick="resetQuiz()">🔄 리셋</button>
         <button onclick="openModal()">➕ 추가</button>
-        <button onclick="openSyncModal()">💾 동기화</button>
+        <button id="loginBtn" onclick="toggleLogin()">🔑 로그인</button>
         <button onclick="toggleDarkMode()">🌙 다크</button> 
     </div>
 
     <div class="list-container" id="appContainer"></div>
 
+    <!-- 방해되지 않는 하단 토스트 메시지 -->
     <div id="toast">메시지</div>
 
+    <!-- 단어 추가 모달 -->
     <div class="modal-overlay" id="wordModal">
         <div class="modal">
             <h3>새 단어 등록</h3>
             <input type="text" id="inputEn" placeholder="외국어 (예: 勉強, figure out)" autocomplete="off">
             <input type="text" id="inputKo" placeholder="뜻 (예: 공부, 이해하다)" autocomplete="off">
             <input type="text" id="inputEx" placeholder="예문 (선택사항)" autocomplete="off">
-            <div style="font-size: 0.7rem; color: var(--hidden-text); text-align: center;">뜻이 여러 개면 쉼표(,) 구분. 일본어도 완벽 지원합니다.</div>
+            <div style="font-size: 0.7rem; color: var(--hidden-text); text-align: center;">뜻이 여러 개면 쉼표(,) 구분. 자동 저장됩니다.</div>
             
             <div class="modal-btns">
                 <button class="btn-cancel" onclick="closeModal('wordModal')">취소</button>
@@ -150,45 +152,45 @@
         </div>
     </div>
 
-    <div class="modal-overlay" id="syncModal">
-        <div class="modal">
-            <h3>💾 데이터 백업 및 복원</h3>
-            <div style="font-size: 0.75rem; color: var(--hidden-text); line-height: 1.3;">
-                <b>[백업]</b> 텍스트 복사 버튼을 눌러 카카오톡에 보내세요.<br>
-                <b>[복원]</b> 가져온 텍스트를 창에 덮어쓰고 복원하세요.
-            </div>
-            
-            <div style="text-align: right; margin-bottom: 2px;">
-                <button type="button" class="copy-btn" onclick="copySyncData()">📋 텍스트 전체 복사</button>
-            </div>
-            
-            <textarea id="syncDataInput" spellcheck="false" onclick="this.select()"></textarea>
-            
-            <div class="modal-btns">
-                <button class="btn-cancel" onclick="closeModal('syncModal')">닫기</button>
-                <button class="btn-save" style="background-color: var(--text-color); color: var(--bg-color);" onclick="importData()">데이터 복원</button>
-            </div>
-        </div>
-    </div>
-
     <script>
+        // ----------------------------------------------------
+        // Firebase 설정 정보
+        // ----------------------------------------------------
+        const firebaseConfig = {
+            apiKey: "AIzaSyC8FHr1_hP_7k5B4tLaEYYLZleRdDOcWX4",
+            authDomain: "shortsenglish.firebaseapp.com",
+            projectId: "shortsenglish",
+            storageBucket: "shortsenglish.firebasestorage.app",
+            messagingSenderId: "1083559151357",
+            appId: "1:1083559151357:web:47a9eba1541da722e4a094",
+            measurementId: "G-R5ZDNN2GE6"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        
+        let currentUser = null;
+        let unsubscribe = null;
+        // ----------------------------------------------------
+
         const container = document.getElementById('appContainer');
         const modeBtn = document.getElementById('modeBtn');
         const wrongBtn = document.getElementById('wrongBtn');
+        const loginBtn = document.getElementById('loginBtn');
         
-        let wordList = JSON.parse(localStorage.getItem('myDictationV6'));
+        let wordList = JSON.parse(localStorage.getItem('myDictationV7'));
         if (!wordList || wordList.length === 0) {
             wordList = [
                 { en: "Figure out", ko: "이해하다, 알아내다", ex: "I need to figure out how this works.<br>(이게 어떻게 작동하는지 알아내야 해.)", errorCount: 0 },
-                { en: "Take over", ko: "인계받다, 대신하다", ex: "Can you take over my shift tomorrow?<br>(내일 제 교대근무 좀 대신해 줄 수 있나요?)", errorCount: 0 },
-                { en: "Sort out", ko: "해결하다, 정리하다", ex: "Don't worry, I'll sort it out.<br>(걱정 마요, 내가 해결할게요.)", errorCount: 0 },
+                { en: "Take over", ko: "인계받다, 대신하다", ex: "Can you take over my shift tomorrow?", errorCount: 0 },
+                { en: "Sort out", ko: "해결하다, 정리하다", ex: "Don't worry, I'll sort it out.", errorCount: 0 },
                 { en: "instead of", ko: "대신에", ex: "I will drink tea instead of coffee.", errorCount: 0 },
                 { en: "love", ko: "사랑, 사랑하다, 애정", ex: "I love you.", errorCount: 0 },
                 { en: "inevitable", ko: "불가피한, 필연적인", ex: "The accident was inevitable.", errorCount: 0 },
-                { en: "勉強", ko: "공부, 공부하다", ex: "日本語を勉強します (일본어를 공부합니다)", errorCount: 0 },
-                { en: "りんご", ko: "사과", ex: "りんごを食べる (사과를 먹다)", errorCount: 0 }
+                { en: "勉強", ko: "공부, 공부하다", ex: "日本語を勉強します", errorCount: 0 },
+                { en: "りんご", ko: "사과", ex: "りんごを食べる", errorCount: 0 }
             ];
-            saveData();
+            saveLocal();
         }
 
         let isEn2Ko = true; 
@@ -197,6 +199,7 @@
         let voices = [];
         window.speechSynthesis.onvoiceschanged = () => { voices = window.speechSynthesis.getVoices(); };
 
+        // 팝업 알림 대신 사용할 토스트 메시지
         function showToast(msg) {
             const toast = document.getElementById('toast');
             toast.innerText = msg;
@@ -204,18 +207,79 @@
             setTimeout(() => { toast.classList.remove('show'); }, 2000);
         }
 
+        // --- 로그인 및 동기화 로직 ---
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                currentUser = user;
+                loginBtn.innerText = "🔓 로그아웃";
+                showToast("구글 계정과 연동되었습니다 ☁️");
+                loadCloudData();
+            } else {
+                currentUser = null;
+                loginBtn.innerText = "🔑 로그인";
+                if(unsubscribe) { unsubscribe(); unsubscribe = null; }
+                wordList = JSON.parse(localStorage.getItem('myDictationV7')) || wordList;
+                renderWords();
+            }
+        });
+
+        function toggleLogin() {
+            if (currentUser) {
+                auth.signOut().then(() => showToast("로그아웃 되었습니다. 로컬 모드로 전환됩니다."));
+            } else {
+                const provider = new firebase.auth.GoogleAuthProvider();
+                auth.signInWithPopup(provider).catch(err => {
+                    showToast("로그인을 취소했거나 오류가 발생했습니다.");
+                });
+            }
+        }
+
+        function loadCloudData() {
+            if (!currentUser) return;
+            const docRef = db.collection("users_vocab_dict").doc(currentUser.uid);
+            
+            if(unsubscribe) unsubscribe();
+            
+            unsubscribe = docRef.onSnapshot(doc => {
+                // 사용자가 로컬에서 정답을 입력해 저장된 경우(PendingWrites), 
+                // 화면을 엎지 않고 냅둬서 입력하던 커서가 풀리지 않도록 보호합니다.
+                if (doc.metadata.hasPendingWrites) return;
+
+                if (doc.exists && doc.data().words) {
+                    wordList = doc.data().words;
+                    saveLocal();
+                    renderWords();
+                } else {
+                    // 클라우드가 비어있으면 현재 로컬 데이터를 업로드
+                    docRef.set({ words: wordList, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+                }
+            });
+        }
+
+        // 통합 저장 (로컬 + 클라우드)
+        function saveData() {
+            saveLocal();
+            if (currentUser) {
+                db.collection("users_vocab_dict").doc(currentUser.uid).set({
+                    words: wordList,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }).catch(err => console.error(err));
+            }
+        }
+        
+        function saveLocal() {
+            localStorage.setItem('myDictationV7', JSON.stringify(wordList));
+        }
+        // ------------------------------
+
         function speak(text) {
             if (!text || !window.speechSynthesis) return;
             window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(text);
             
-            if (/[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(text)) {
-                utterance.lang = 'ja-JP';
-            } else if (/[가-힣]/.test(text)) {
-                utterance.lang = 'ko-KR';
-            } else {
-                utterance.lang = 'en-US';
-            }
+            if (/[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(text)) utterance.lang = 'ja-JP';
+            else if (/[가-힣]/.test(text)) utterance.lang = 'ko-KR';
+            else utterance.lang = 'en-US';
             
             utterance.rate = 0.9;
             window.speechSynthesis.speak(utterance);
@@ -293,15 +357,15 @@
                 msgEl.style.color = 'var(--correct-color)';
                 
                 speak(word.en); 
-                word.errorCount = 0; 
-                saveData(); 
+                word.errorCount = 0; // 오답 횟수 초기화
+                saveData(); // 정답 맞춘 것도 클라우드 저장
 
+                // 오답노트에서 정답 시 시각적으로 바로 탈출 처리
                 if (isWrongMode) {
                     showToast("오답노트에서 탈출했습니다! 🎉");
                     setTimeout(() => {
                         const cardToHide = document.getElementById(`card-${index}`);
                         if(cardToHide) cardToHide.style.display = 'none';
-                        
                         const remainingCards = Array.from(document.querySelectorAll('.card')).filter(c => c.style.display !== 'none');
                         if(remainingCards.length === 0) renderWords();
                     }, 500);
@@ -318,7 +382,7 @@
                 msgEl.style.color = 'var(--danger-color)';
                 
                 word.errorCount += 1;
-                saveData();
+                saveData(); // 오답 횟수도 클라우드 저장
                 speak(word.en);
                 
                 const cardHeader = document.getElementById(`card-${index}`).querySelector('.question-title');
@@ -331,10 +395,6 @@
             }
         }
 
-        function saveData() {
-            localStorage.setItem('myDictationV6', JSON.stringify(wordList));
-        }
-
         function toggleMode() {
             isEn2Ko = !isEn2Ko;
             modeBtn.innerText = isEn2Ko ? "🅰️ 외 ➔ 한" : "🇰🇷 한 ➔ 외";
@@ -344,11 +404,11 @@
         function toggleWrongMode() {
             isWrongMode = !isWrongMode;
             if(isWrongMode) {
-                wrongBtn.classList.add('active'); wrongBtn.innerText = "📖 전체 보기";
-                showToast("오답노트 모드로 전환되었습니다.");
+                wrongBtn.classList.add('active-btn'); wrongBtn.innerText = "📖 전체 보기";
+                showToast("오답노트 모드");
             } else {
-                wrongBtn.classList.remove('active'); wrongBtn.innerText = "📖 오답노트";
-                showToast("전체 단어 모드로 전환되었습니다.");
+                wrongBtn.classList.remove('active-btn'); wrongBtn.innerText = "📖 오답노트";
+                showToast("전체 단어 모드");
             }
             renderWords();
         }
@@ -378,25 +438,8 @@
             document.getElementById('inputEn').focus();
         }
 
-        function openSyncModal() {
-            document.getElementById('syncModal').style.display = 'flex';
-            document.getElementById('syncDataInput').value = JSON.stringify(wordList);
-        }
-
         function closeModal(modalId) { 
             document.getElementById(modalId).style.display = 'none'; 
-        }
-
-        function copySyncData() {
-            const syncInput = document.getElementById('syncDataInput');
-            syncInput.select();
-            syncInput.setSelectionRange(0, 99999); 
-            try {
-                document.execCommand('copy');
-                showToast("클립보드에 복사되었습니다! 🚀");
-            } catch (err) {
-                showToast("복사에 실패했습니다.");
-            }
         }
 
         function saveWord() {
@@ -413,30 +456,11 @@
         }
 
         function deleteWord(index) {
-            if(confirm("정말 삭제하시겠습니까?")) { 
+            // 삭제 기능은 돌이킬 수 없으므로 안전을 위해 유일하게 기본 확인창 유지
+            if(confirm("이 단어를 정말 삭제하시겠습니까?")) { 
                 wordList.splice(index, 1); 
                 saveData(); renderWords(); 
-            }
-        }
-
-        function importData() {
-            const importStr = document.getElementById('syncDataInput').value.trim();
-            if(!importStr) {
-                showToast("복원할 코드를 입력해주세요."); return;
-            }
-            try {
-                const parsed = JSON.parse(importStr);
-                if(Array.isArray(parsed)) {
-                    wordList = parsed;
-                    saveData();
-                    renderWords();
-                    closeModal('syncModal');
-                    showToast("데이터가 성공적으로 복원되었습니다!");
-                } else {
-                    showToast("잘못된 형식의 데이터입니다.");
-                }
-            } catch(e) {
-                showToast("코드를 해독할 수 없습니다.");
+                showToast("삭제되었습니다.");
             }
         }
 
