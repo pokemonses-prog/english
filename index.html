@@ -176,7 +176,7 @@
             <div style="font-size: 0.78rem; color: var(--hidden-text); line-height: 1.4;">
                 Firebase 설정 코드를 붙여넣으면 PC와 스마트폰이 <b>실시간으로 자동 연동</b>됩니다.
             </div>
-            <textarea id="firebaseConfigInput" placeholder="const firebaseConfig = { ... }; 붙여넣기" spellcheck="false"></textarea>
+            <textarea id="firebaseConfigInput" placeholder="여기에 복사한 코드를 그대로 붙여넣어주세요!" spellcheck="false"></textarea>
             <div class="modal-btns">
                 <button class="btn-cancel" onclick="closeModal('syncModal')">닫기</button>
                 <button class="btn-save" onclick="applyFirebaseConfig()">연결하기</button>
@@ -333,7 +333,7 @@
             renderWords(); closeModal('wordModal');
         }
 
-        // --- Firebase 실시간 동기화 초기화 ---
+        // --- Firebase 실시간 동기화 (버그 완벽 수정본) ---
         function initFirebase() {
             const savedConfig = localStorage.getItem('myFirebaseConfig_shorts');
             if (!savedConfig) {
@@ -349,7 +349,6 @@
                 cloudBtn.innerText = "☁️ 연동됨";
 
                 if (unsubscribe) unsubscribe();
-                // 실시간 리스너: 다른 기기에서 추가/삭제 시 화면 즉시 반영
                 unsubscribe = db.collection("shorts_vocab").doc("my_list").onSnapshot(doc => {
                     if (doc.exists && doc.data().words) {
                         wordList = doc.data().words;
@@ -370,17 +369,22 @@
             let raw = document.getElementById('firebaseConfigInput').value.trim();
             if(!raw) { showToast("설정 코드를 입력해주세요."); return; }
             try {
-                if (raw.includes('{') && raw.includes('}')) {
-                    raw = raw.substring(raw.indexOf('{'), raw.lastIndexOf('}') + 1);
-                    raw = raw.replace(/([a-zA-Z0-9_]+)\s*:/g, '"$1":').replace(/'/g, '"').replace(/,\s*}/g, '}');
+                let configObj;
+                // 안전한 방식으로 자바스크립트 객체를 파싱 (appId 문자열 파괴 방지)
+                if (raw.includes('apiKey')) {
+                    let objStr = raw.substring(raw.indexOf('{'), raw.lastIndexOf('}') + 1);
+                    configObj = new Function('return ' + objStr)();
+                } else {
+                    configObj = JSON.parse(raw);
                 }
-                const parsed = JSON.parse(raw);
-                localStorage.setItem('myFirebaseConfig_shorts', JSON.stringify(parsed));
+                
+                localStorage.setItem('myFirebaseConfig_shorts', JSON.stringify(configObj));
                 initFirebase();
-                saveAndReload();
+                saveAndReload(); // 현재 단어장 상태를 클라우드에 1회 강제 푸시
                 closeModal('syncModal');
                 showToast("🎉 클라우드 연결 완료! 실시간 연동 시작");
             } catch(e) {
+                console.error(e);
                 showToast("올바른 설정 코드가 아닙니다.");
             }
         }
@@ -445,8 +449,6 @@
 
         function openSyncModal() {
             document.getElementById('syncModal').style.display = 'flex';
-            const saved = localStorage.getItem('myFirebaseConfig_shorts');
-            if(saved) document.getElementById('firebaseConfigInput').value = saved;
         }
 
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
