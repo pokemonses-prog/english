@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>심플 영단어장 - 워홀 마스터</title>
+
+    <!-- Firebase SDK (기기 간 실시간 동기화) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
     <style>
         :root {
             --bg-color: #ffffff; --text-color: #000000;
@@ -12,6 +17,7 @@
             --border-color: #e2e2e2;
             --modal-overlay: rgba(0, 0, 0, 0.6);
             --danger-color: #ff4757; --example-color: #555555;
+            --correct-color: #27ae60;
         }
 
         body.dark-mode {
@@ -30,19 +36,18 @@
             transition: background-color 0.3s, color 0.3s;
         }
 
-        /* 상단 버튼들 */
         .controls {
             position: fixed; top: 20px; right: 20px; z-index: 100;
-            display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;
+            display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;
         }
         .controls button {
             background-color: var(--btn-bg); color: var(--btn-text);
             border: none; padding: 8px 12px; border-radius: 6px;
-            font-size: 0.9rem; font-weight: bold; cursor: pointer; transition: 0.3s;
+            font-size: 0.85rem; font-weight: bold; cursor: pointer; transition: 0.3s;
         }
         .controls button.shuffle-btn { background-color: #4CAF50; color: white; }
+        .controls button.cloud-btn.active { background-color: var(--correct-color); color: white; }
 
-        /* 하단 페이지 표시기 */
         .page-indicator {
             position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
             background-color: var(--btn-bg); color: var(--btn-text);
@@ -63,39 +68,31 @@
             gap: 15px; box-sizing: border-box; padding: 20px;
         }
 
-        /* 상단 보조 버튼 3종 (한 줄 고정) */
         .helper-btns {
-            display: flex; gap: 6px; flex-wrap: nowrap; /* 줄바꿈 방지 */
-            justify-content: center; width: 100%; max-width: 300px;
-            box-sizing: border-box;
+            display: flex; gap: 6px; flex-wrap: nowrap;
+            justify-content: center; width: 100%; max-width: 300px; box-sizing: border-box;
         }
         .helper-btn {
-            flex: 1; white-space: nowrap; /* 텍스트 한줄 고정 */
-            background-color: transparent; color: var(--hidden-text);
+            flex: 1; white-space: nowrap; background-color: transparent; color: var(--hidden-text);
             border: 1px solid var(--border-color); padding: 6px 0; text-align: center;
-            border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer;
-            transition: all 0.2s ease;
+            border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;
         }
         .helper-btn:hover { background-color: var(--hidden-bg); color: var(--text-color); }
 
-        /* 일체형 스택 블록 디자인 */
         .stack-block {
             width: 100%; max-width: 300px; border-radius: 12px; overflow: hidden;
-            border: 1px solid var(--border-color);
-            display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            border: 1px solid var(--border-color); display: flex; flex-direction: column;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         }
 
-        /* 개별 줄 (열리면 배경이 흰색으로 지정됨) */
         .stack-row {
             position: relative; min-height: 58px; display: flex; align-items: center; justify-content: center;
             border-bottom: 1px solid var(--border-color); cursor: pointer; user-select: none;
             box-sizing: border-box; padding: 10px 15px; text-align: center;
-            background-color: var(--bg-color); /* 열렸을 때 흰색 배경 */
-            transition: background-color 0.3s ease;
+            background-color: var(--bg-color); transition: background-color 0.3s ease;
         }
         .stack-row:last-child { border-bottom: none; }
 
-        /* 회색 가림막 (닫혔을 때 회색 배경) */
         .row-cover {
             position: absolute; inset: 0; background-color: var(--hidden-bg);
             display: flex; align-items: center; justify-content: center;
@@ -104,14 +101,13 @@
             opacity: 1; visibility: visible;
         }
 
-        /* 실제 내용 (페이드인 전환) */
         .row-content {
             display: flex; align-items: center; justify-content: center; gap: 8px;
             width: 100%; opacity: 0; visibility: hidden;
             transition: opacity 0.3s ease, visibility 0.3s ease; z-index: 1;
         }
 
-        /* 열림(show) 상태: 회색 가림막이 사라지고 흰색 바탕의 내용이 표시됨 */
+        /* 열렸을 때 페이드인 */
         .stack-row.show .row-cover { opacity: 0; visibility: hidden; }
         .stack-row.show .row-content { opacity: 1; visibility: visible; }
 
@@ -123,13 +119,22 @@
 
         .modal-overlay { position: fixed; inset: 0; background-color: var(--modal-overlay); display: none; justify-content: center; align-items: center; z-index: 200; }
         .modal { background-color: var(--bg-color); padding: 25px; border-radius: 12px; width: 85%; max-width: 320px; display: flex; flex-direction: column; gap: 10px; }
-        .modal input, .modal textarea { padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; background-color: var(--bg-color); color: var(--text-color); font-size: 1rem; outline: none; }
-        .modal textarea { resize: none; height: 50px; }
+        .modal h3 { margin: 0; text-align: center; font-size: 1.1rem; }
+        .modal input, .modal textarea { padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; background-color: var(--bg-color); color: var(--text-color); font-size: 0.95rem; outline: none; }
+        .modal textarea { resize: none; height: 75px; font-family: monospace; font-size: 0.8rem; }
         .modal-btns { display: flex; gap: 8px; margin-top: 5px; }
         .modal-btns button { flex: 1; padding: 10px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; }
         .btn-cancel { background-color: var(--hidden-bg); color: var(--text-color); }
         .btn-save { background-color: var(--btn-bg); color: var(--btn-text); }
         .btn-delete { background-color: var(--danger-color); color: white; display: none; }
+
+        #toast {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.85); color: white;
+            padding: 9px 18px; border-radius: 20px; font-size: 0.85rem;
+            z-index: 999; opacity: 0; visibility: hidden; transition: 0.3s; pointer-events: none;
+        }
+        #toast.show { opacity: 1; visibility: visible; }
     </style>
 </head>
 <body>
@@ -137,13 +142,16 @@
     <div class="controls">
         <button class="shuffle-btn" onclick="shuffleWords()">🔀 섞기</button>
         <button onclick="openModal()">+ 추가</button>
+        <button class="cloud-btn" id="cloudBtn" onclick="openSyncModal()">☁️ 동기화</button>
         <button onclick="toggleDarkMode()">다크</button>
         <button onclick="toggleFullScreen()">전체화면</button> 
     </div>
 
     <div class="page-indicator" id="pageInfo" onclick="jumpToPage()">0 / 0 🔍</div>
     <div class="shorts-container" id="appContainer"></div>
+    <div id="toast"></div>
 
+    <!-- 단어 등록 모달 -->
     <div class="modal-overlay" id="wordModal">
         <div class="modal">
             <h3 id="modalTitle">새 단어 등록</h3>
@@ -155,27 +163,48 @@
             
             <div class="modal-btns">
                 <button id="btnDelete" class="btn-delete" onclick="deleteWord()">삭제</button>
-                <button class="btn-cancel" onclick="closeModal()">취소</button>
+                <button class="btn-cancel" onclick="closeModal('wordModal')">취소</button>
                 <button class="btn-save" onclick="saveWord()">저장</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Firebase 클라우드 동기화 모달 -->
+    <div class="modal-overlay" id="syncModal">
+        <div class="modal">
+            <h3>☁️ 기기 간 실시간 자동 동기화</h3>
+            <div style="font-size: 0.78rem; color: var(--hidden-text); line-height: 1.4;">
+                Firebase 설정 코드를 붙여넣으면 PC와 스마트폰이 <b>실시간으로 자동 연동</b>됩니다.
+            </div>
+            <textarea id="firebaseConfigInput" placeholder="const firebaseConfig = { ... }; 붙여넣기" spellcheck="false"></textarea>
+            <div class="modal-btns">
+                <button class="btn-cancel" onclick="closeModal('syncModal')">닫기</button>
+                <button class="btn-save" onclick="applyFirebaseConfig()">연결하기</button>
+            </div>
+            <button style="background:none; border:none; color:var(--danger-color); font-size:0.75rem; cursor:pointer; margin-top:4px;" onclick="clearFirebaseConfig()">연동 해제 및 로컬 모드 전환</button>
         </div>
     </div>
 
     <script>
         const container = document.getElementById('appContainer');
         const pageInfo = document.getElementById('pageInfo');
-        let wordList = JSON.parse(localStorage.getItem('myWordList_v2')) || [];
+        const cloudBtn = document.getElementById('cloudBtn');
 
-        if (wordList.length === 0) {
-            wordList = [
-                { en: "Figure out", pron: "[ˈfɪɡjər aʊt]", ko: "이해하다, 알아내다", exEn: "I need to figure out how this works.", exKo: "이게 어떻게 작동하는지 알아내야 해." },
-                { en: "Take over", pron: "[teɪk ˈoʊvər]", ko: "인계받다, 대신하다", exEn: "Can you take over my shift tomorrow?", exKo: "내일 제 교대근무 좀 대신해 줄 수 있나요?" },
-                { en: "Sort out", pron: "[sɔːrt aʊt]", ko: "해결하다, 정리하다", exEn: "Don't worry, I'll sort it out.", exKo: "걱정 마요, 내가 해결할게요." }
-            ];
-            localStorage.setItem('myWordList_v2', JSON.stringify(wordList));
-        }
+        let wordList = JSON.parse(localStorage.getItem('myWordList_v2')) || [
+            { en: "Figure out", pron: "[ˈfɪɡjər aʊt]", ko: "이해하다, 알아내다", exEn: "I need to figure out how this works.", exKo: "이게 어떻게 작동하는지 알아내야 해." },
+            { en: "Take over", pron: "[teɪk ˈoʊvər]", ko: "인계받다, 대신하다", exEn: "Can you take over my shift tomorrow?", exKo: "내일 제 교대근무 좀 대신해 줄 수 있나요?" },
+            { en: "Sort out", pron: "[sɔːrt aʊt]", ko: "해결하다, 정리하다", exEn: "Don't worry, I'll sort it out.", exKo: "걱정 마요, 내가 해결할게요." }
+        ];
 
         let totalWords = wordList.length;
+        let db = null;
+        let unsubscribe = null;
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg; toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
 
         function renderWords() {
             observer.disconnect(); container.innerHTML = '';
@@ -199,8 +228,8 @@
                     </div>
 
                     <div class="stack-block">
-                        <!-- 1. 영어단어 (기본 가려짐 상태) -->
-                        <div class="stack-row" onclick="this.classList.toggle('show')">
+                        <!-- 1. 영어단어: 처음부터 열려있음 (show 클래스 포함) -->
+                        <div class="stack-row show" onclick="this.classList.toggle('show')">
                             <div class="row-cover">영어단어</div>
                             <div class="row-content">
                                 <span class="word-text">${item.en}</span>
@@ -208,7 +237,7 @@
                             </div>
                         </div>
 
-                        <!-- 2. 예문 (기본 가려짐 상태) -->
+                        <!-- 2. 예문: 기본 닫힘 -->
                         <div class="stack-row" onclick="this.classList.toggle('show')">
                             <div class="row-cover">예문</div>
                             <div class="row-content">
@@ -217,7 +246,7 @@
                             </div>
                         </div>
 
-                        <!-- 3. 뜻 (기본 가려짐 상태) -->
+                        <!-- 3. 뜻: 기본 닫힘 -->
                         <div class="stack-row" onclick="this.classList.toggle('show')">
                             <div class="row-cover">뜻</div>
                             <div class="row-content">
@@ -226,7 +255,7 @@
                             </div>
                         </div>
 
-                        <!-- 4. 예문 뜻 (기본 가려짐 상태) -->
+                        <!-- 4. 예문 뜻: 기본 닫힘 -->
                         <div class="stack-row" onclick="this.classList.toggle('show')">
                             <div class="row-cover">예문 뜻</div>
                             <div class="row-content">
@@ -267,6 +296,7 @@
             event.stopPropagation();
             const rawText = btn.getAttribute('data-text');
             if(!rawText) return;
+
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
                 setTimeout(() => {
@@ -279,6 +309,7 @@
                         if (/[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(text)) detectedLang = 'ja-JP';
                         else if (/[가-힣]/.test(text)) detectedLang = 'ko-KR';
                         utterance.lang = detectedLang;
+
                         if (voices.length > 0) {
                             const voice = voices.find(v => v.lang.includes(detectedLang) || v.lang.includes(detectedLang.replace('-', '_')));
                             if (voice) utterance.voice = voice;
@@ -287,6 +318,82 @@
                         window.speechSynthesis.speak(utterance);
                     });
                 }, 50);
+            }
+        }
+
+        // --- 클라우드 & 로컬 동시 저장 ---
+        function saveAndReload() {
+            localStorage.setItem('myWordList_v2', JSON.stringify(wordList));
+            if (db) {
+                db.collection("shorts_vocab").doc("my_list").set({
+                    words: wordList,
+                    updatedAt: new Date().getTime()
+                }).catch(err => console.error("클라우드 저장 에러:", err));
+            }
+            renderWords(); closeModal('wordModal');
+        }
+
+        // --- Firebase 실시간 동기화 초기화 ---
+        function initFirebase() {
+            const savedConfig = localStorage.getItem('myFirebaseConfig_shorts');
+            if (!savedConfig) {
+                cloudBtn.classList.remove('active');
+                cloudBtn.innerText = "☁️ 동기화";
+                return;
+            }
+            try {
+                const config = JSON.parse(savedConfig);
+                if (!firebase.apps.length) firebase.initializeApp(config);
+                db = firebase.firestore();
+                cloudBtn.classList.add('active');
+                cloudBtn.innerText = "☁️ 연동됨";
+
+                if (unsubscribe) unsubscribe();
+                // 실시간 리스너: 다른 기기에서 추가/삭제 시 화면 즉시 반영
+                unsubscribe = db.collection("shorts_vocab").doc("my_list").onSnapshot(doc => {
+                    if (doc.exists && doc.data().words) {
+                        wordList = doc.data().words;
+                        localStorage.setItem('myWordList_v2', JSON.stringify(wordList));
+                        renderWords();
+                    }
+                }, err => {
+                    console.error("동기화 오류:", err);
+                    showToast("클라우드 읽기 권한을 확인해주세요.");
+                });
+            } catch(e) {
+                console.error("Firebase 초기화 에러:", e);
+                cloudBtn.classList.remove('active');
+            }
+        }
+
+        function applyFirebaseConfig() {
+            let raw = document.getElementById('firebaseConfigInput').value.trim();
+            if(!raw) { showToast("설정 코드를 입력해주세요."); return; }
+            try {
+                if (raw.includes('{') && raw.includes('}')) {
+                    raw = raw.substring(raw.indexOf('{'), raw.lastIndexOf('}') + 1);
+                    raw = raw.replace(/([a-zA-Z0-9_]+)\s*:/g, '"$1":').replace(/'/g, '"').replace(/,\s*}/g, '}');
+                }
+                const parsed = JSON.parse(raw);
+                localStorage.setItem('myFirebaseConfig_shorts', JSON.stringify(parsed));
+                initFirebase();
+                saveAndReload();
+                closeModal('syncModal');
+                showToast("🎉 클라우드 연결 완료! 실시간 연동 시작");
+            } catch(e) {
+                showToast("올바른 설정 코드가 아닙니다.");
+            }
+        }
+
+        function clearFirebaseConfig() {
+            if(confirm("클라우드 연결을 해제할까요?")) {
+                localStorage.removeItem('myFirebaseConfig_shorts');
+                if (unsubscribe) unsubscribe();
+                db = null;
+                cloudBtn.classList.remove('active');
+                cloudBtn.innerText = "☁️ 동기화";
+                closeModal('syncModal');
+                showToast("클라우드 연결 해제됨");
             }
         }
 
@@ -336,7 +443,13 @@
             inputEn.focus();
         }
 
-        function closeModal() { modal.style.display = 'none'; }
+        function openSyncModal() {
+            document.getElementById('syncModal').style.display = 'flex';
+            const saved = localStorage.getItem('myFirebaseConfig_shorts');
+            if(saved) document.getElementById('firebaseConfigInput').value = saved;
+        }
+
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
         function saveWord() {
             const enText = inputEn.value.trim(); const pronText = inputPron.value.trim();
@@ -355,7 +468,6 @@
             }
         }
 
-        function saveAndReload() { localStorage.setItem('myWordList_v2', JSON.stringify(wordList)); renderWords(); closeModal(); }
         function scrollToTarget(index, behavior) {
             const targetCard = document.querySelector(`.card[data-index="${index}"]`);
             if (targetCard) container.scrollTo({ top: targetCard.offsetTop, behavior: behavior });
@@ -365,6 +477,7 @@
             renderWords();
             const savedIndex = localStorage.getItem('lastViewedWordIndex_v2');
             if (savedIndex !== null && wordList.length > 0) scrollToTarget(savedIndex, 'auto');
+            initFirebase();
         }
 
         function toggleDarkMode() { document.body.classList.toggle('dark-mode'); }
