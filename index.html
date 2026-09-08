@@ -5,9 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>심플 영단어장 - 워홀 마스터</title>
 
-    <!-- Firebase SDK (기기 간 실시간 동기화) -->
+    <!-- Firebase SDK (기기 간 실시간 동기화 및 구글 로그인) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
     <style>
         :root {
@@ -17,7 +18,6 @@
             --border-color: #e2e2e2;
             --modal-overlay: rgba(0, 0, 0, 0.6);
             --danger-color: #ff4757; --example-color: #555555;
-            --correct-color: #27ae60;
         }
 
         body.dark-mode {
@@ -36,6 +36,7 @@
             transition: background-color 0.3s, color 0.3s;
         }
 
+        /* 튀는 색상 없이 깔끔하게 통일된 상단 버튼들 */
         .controls {
             position: fixed; top: 20px; right: 20px; z-index: 100;
             display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;
@@ -45,8 +46,7 @@
             border: none; padding: 8px 12px; border-radius: 6px;
             font-size: 0.85rem; font-weight: bold; cursor: pointer; transition: 0.3s;
         }
-        .controls button.shuffle-btn { background-color: #4CAF50; color: white; }
-        .controls button.cloud-btn.active { background-color: var(--correct-color); color: white; }
+        .controls button:active { transform: scale(0.95); }
 
         .page-indicator {
             position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
@@ -140,9 +140,9 @@
 <body>
 
     <div class="controls">
-        <button class="shuffle-btn" onclick="shuffleWords()">🔀 섞기</button>
+        <button onclick="shuffleWords()">🔀 섞기</button>
         <button onclick="openModal()">+ 추가</button>
-        <button class="cloud-btn" id="cloudBtn" onclick="openSyncModal()">☁️ 동기화</button>
+        <button id="loginBtn" onclick="toggleLogin()">🔑 구글 로그인</button>
         <button onclick="toggleDarkMode()">다크</button>
         <button onclick="toggleFullScreen()">전체화면</button> 
     </div>
@@ -169,41 +169,110 @@
         </div>
     </div>
 
-    <!-- Firebase 클라우드 동기화 모달 -->
-    <div class="modal-overlay" id="syncModal">
-        <div class="modal">
-            <h3>☁️ 기기 간 실시간 자동 동기화</h3>
-            <div style="font-size: 0.78rem; color: var(--hidden-text); line-height: 1.4;">
-                Firebase 설정 코드를 붙여넣으면 PC와 스마트폰이 <b>실시간으로 자동 연동</b>됩니다.
-            </div>
-            <textarea id="firebaseConfigInput" placeholder="여기에 복사한 코드를 그대로 붙여넣어주세요!" spellcheck="false"></textarea>
-            <div class="modal-btns">
-                <button class="btn-cancel" onclick="closeModal('syncModal')">닫기</button>
-                <button class="btn-save" onclick="applyFirebaseConfig()">연결하기</button>
-            </div>
-            <button style="background:none; border:none; color:var(--danger-color); font-size:0.75rem; cursor:pointer; margin-top:4px;" onclick="clearFirebaseConfig()">연동 해제 및 로컬 모드 전환</button>
-        </div>
-    </div>
-
     <script>
+        // ----------------------------------------------------
+        // 고객님 전용 Firebase 설정 정보 (수정 금지)
+        // ----------------------------------------------------
+        const firebaseConfig = {
+            apiKey: "AIzaSyC8Fhr1_hP_7k5B4tLaEYYLZleRdD0CWX4",
+            authDomain: "shortsenglish.firebaseapp.com",
+            projectId: "shortsenglish",
+            storageBucket: "shortsenglish.firebasestorage.app",
+            messagingSenderId: "1083559151357",
+            appId: "1:1083559151357:web:47a9eba1541da722e4a094",
+            measurementId: "G-R5ZDNN2GE6"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        
+        let currentUser = null;
+        let unsubscribe = null;
+        // ----------------------------------------------------
+
         const container = document.getElementById('appContainer');
         const pageInfo = document.getElementById('pageInfo');
-        const cloudBtn = document.getElementById('cloudBtn');
+        const loginBtn = document.getElementById('loginBtn');
 
-        let wordList = JSON.parse(localStorage.getItem('myWordList_v2')) || [
+        const defaultWords = [
             { en: "Figure out", pron: "[ˈfɪɡjər aʊt]", ko: "이해하다, 알아내다", exEn: "I need to figure out how this works.", exKo: "이게 어떻게 작동하는지 알아내야 해." },
             { en: "Take over", pron: "[teɪk ˈoʊvər]", ko: "인계받다, 대신하다", exEn: "Can you take over my shift tomorrow?", exKo: "내일 제 교대근무 좀 대신해 줄 수 있나요?" },
             { en: "Sort out", pron: "[sɔːrt aʊt]", ko: "해결하다, 정리하다", exEn: "Don't worry, I'll sort it out.", exKo: "걱정 마요, 내가 해결할게요." }
         ];
 
+        let wordList = JSON.parse(localStorage.getItem('myWordList_v2')) || defaultWords;
         let totalWords = wordList.length;
-        let db = null;
-        let unsubscribe = null;
 
         function showToast(msg) {
             const toast = document.getElementById('toast');
             toast.innerText = msg; toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 2000);
+            setTimeout(() => toast.classList.remove('show'), 2500);
+        }
+
+        // --- 로그인 상태 감지 및 동기화 ---
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                currentUser = user;
+                loginBtn.innerText = "🔓 로그아웃";
+                showToast(`환영합니다! 클라우드 연동 중...`);
+                loadCloudData(); // 로그인 시 내 단어장 불러오기
+            } else {
+                currentUser = null;
+                loginBtn.innerText = "🔑 구글 로그인";
+                if(unsubscribe) { unsubscribe(); unsubscribe = null; }
+                
+                // 로그아웃 상태면 로컬에 저장된 단어 보여주기
+                wordList = JSON.parse(localStorage.getItem('myWordList_v2')) || defaultWords;
+                renderWords();
+            }
+        });
+
+        // --- 로그인 / 로그아웃 버튼 ---
+        function toggleLogin() {
+            if (currentUser) {
+                auth.signOut().then(() => showToast("로그아웃 되었습니다. 기기 단어장으로 전환합니다."));
+            } else {
+                const provider = new firebase.auth.GoogleAuthProvider();
+                auth.signInWithPopup(provider).catch(err => {
+                    console.error("로그인 에러:", err);
+                    showToast("로그인을 취소했거나 오류가 발생했습니다.");
+                });
+            }
+        }
+
+        // --- 구글 계정 전용 단어장 불러오기 ---
+        function loadCloudData() {
+            if (!currentUser) return;
+            const docRef = db.collection("users_vocab").doc(currentUser.uid);
+            
+            if(unsubscribe) unsubscribe();
+            
+            // 내 계정 폴더의 단어를 실시간으로 감시해서 화면에 뿌려줌
+            unsubscribe = docRef.onSnapshot(doc => {
+                if (doc.exists && doc.data().words) {
+                    wordList = doc.data().words;
+                    localStorage.setItem('myWordList_v2', JSON.stringify(wordList)); // 로컬 백업
+                    renderWords();
+                } else {
+                    // 클라우드에 단어가 아예 없으면 지금 화면에 있는 단어들을 업로드해서 초기화
+                    docRef.set({ words: wordList, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+                }
+            }, err => {
+                console.error("동기화 에러:", err);
+            });
+        }
+
+        // --- 단어 저장 시 클라우드에도 저장 ---
+        function saveAndReload() {
+            localStorage.setItem('myWordList_v2', JSON.stringify(wordList));
+            
+            if (currentUser) {
+                db.collection("users_vocab").doc(currentUser.uid).set({
+                    words: wordList,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }).catch(err => console.error("업로드 에러:", err));
+            }
+            renderWords(); closeModal('wordModal');
         }
 
         function renderWords() {
@@ -228,7 +297,7 @@
                     </div>
 
                     <div class="stack-block">
-                        <!-- 1. 영어단어: 처음부터 열려있음 (show 클래스 포함) -->
+                        <!-- 영어단어: 처음부터 열려있음 -->
                         <div class="stack-row show" onclick="this.classList.toggle('show')">
                             <div class="row-cover">영어단어</div>
                             <div class="row-content">
@@ -237,7 +306,7 @@
                             </div>
                         </div>
 
-                        <!-- 2. 예문: 기본 닫힘 -->
+                        <!-- 예문 -->
                         <div class="stack-row" onclick="this.classList.toggle('show')">
                             <div class="row-cover">예문</div>
                             <div class="row-content">
@@ -246,7 +315,7 @@
                             </div>
                         </div>
 
-                        <!-- 3. 뜻: 기본 닫힘 -->
+                        <!-- 뜻 -->
                         <div class="stack-row" onclick="this.classList.toggle('show')">
                             <div class="row-cover">뜻</div>
                             <div class="row-content">
@@ -255,7 +324,7 @@
                             </div>
                         </div>
 
-                        <!-- 4. 예문 뜻: 기본 닫힘 -->
+                        <!-- 예문 뜻 -->
                         <div class="stack-row" onclick="this.classList.toggle('show')">
                             <div class="row-cover">예문 뜻</div>
                             <div class="row-content">
@@ -321,86 +390,6 @@
             }
         }
 
-        // --- 클라우드 & 로컬 동시 저장 ---
-        function saveAndReload() {
-            localStorage.setItem('myWordList_v2', JSON.stringify(wordList));
-            if (db) {
-                db.collection("shorts_vocab").doc("my_list").set({
-                    words: wordList,
-                    updatedAt: new Date().getTime()
-                }).catch(err => console.error("클라우드 저장 에러:", err));
-            }
-            renderWords(); closeModal('wordModal');
-        }
-
-        // --- Firebase 실시간 동기화 (버그 완벽 수정본) ---
-        function initFirebase() {
-            const savedConfig = localStorage.getItem('myFirebaseConfig_shorts');
-            if (!savedConfig) {
-                cloudBtn.classList.remove('active');
-                cloudBtn.innerText = "☁️ 동기화";
-                return;
-            }
-            try {
-                const config = JSON.parse(savedConfig);
-                if (!firebase.apps.length) firebase.initializeApp(config);
-                db = firebase.firestore();
-                cloudBtn.classList.add('active');
-                cloudBtn.innerText = "☁️ 연동됨";
-
-                if (unsubscribe) unsubscribe();
-                unsubscribe = db.collection("shorts_vocab").doc("my_list").onSnapshot(doc => {
-                    if (doc.exists && doc.data().words) {
-                        wordList = doc.data().words;
-                        localStorage.setItem('myWordList_v2', JSON.stringify(wordList));
-                        renderWords();
-                    }
-                }, err => {
-                    console.error("동기화 오류:", err);
-                    showToast("클라우드 읽기 권한을 확인해주세요.");
-                });
-            } catch(e) {
-                console.error("Firebase 초기화 에러:", e);
-                cloudBtn.classList.remove('active');
-            }
-        }
-
-        function applyFirebaseConfig() {
-            let raw = document.getElementById('firebaseConfigInput').value.trim();
-            if(!raw) { showToast("설정 코드를 입력해주세요."); return; }
-            try {
-                let configObj;
-                // 안전한 방식으로 자바스크립트 객체를 파싱 (appId 문자열 파괴 방지)
-                if (raw.includes('apiKey')) {
-                    let objStr = raw.substring(raw.indexOf('{'), raw.lastIndexOf('}') + 1);
-                    configObj = new Function('return ' + objStr)();
-                } else {
-                    configObj = JSON.parse(raw);
-                }
-                
-                localStorage.setItem('myFirebaseConfig_shorts', JSON.stringify(configObj));
-                initFirebase();
-                saveAndReload(); // 현재 단어장 상태를 클라우드에 1회 강제 푸시
-                closeModal('syncModal');
-                showToast("🎉 클라우드 연결 완료! 실시간 연동 시작");
-            } catch(e) {
-                console.error(e);
-                showToast("올바른 설정 코드가 아닙니다.");
-            }
-        }
-
-        function clearFirebaseConfig() {
-            if(confirm("클라우드 연결을 해제할까요?")) {
-                localStorage.removeItem('myFirebaseConfig_shorts');
-                if (unsubscribe) unsubscribe();
-                db = null;
-                cloudBtn.classList.remove('active');
-                cloudBtn.innerText = "☁️ 동기화";
-                closeModal('syncModal');
-                showToast("클라우드 연결 해제됨");
-            }
-        }
-
         function shuffleWords() {
             if(wordList.length < 2) return;
             if(confirm("단어 순서를 무작위로 섞으시겠습니까?")) {
@@ -447,10 +436,6 @@
             inputEn.focus();
         }
 
-        function openSyncModal() {
-            document.getElementById('syncModal').style.display = 'flex';
-        }
-
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
         function saveWord() {
@@ -479,7 +464,6 @@
             renderWords();
             const savedIndex = localStorage.getItem('lastViewedWordIndex_v2');
             if (savedIndex !== null && wordList.length > 0) scrollToTarget(savedIndex, 'auto');
-            initFirebase();
         }
 
         function toggleDarkMode() { document.body.classList.toggle('dark-mode'); }
